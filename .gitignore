@@ -1,0 +1,20 @@
+﻿# --- Node / React Native ---
+node_modules/
+.expo/
+.expo-shared/
+dist/
+build/
+*.log
+.env
+.env.*
+
+# --- .NET ---
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
