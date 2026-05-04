@@ -150,7 +150,7 @@ export default function Dashboard() {
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
           </View>
-              
+
           {/* Senaste händelser */}
           <View style={styles.infoCard}>
             <View style={styles.infoCardHeader}>
@@ -502,3 +502,4 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
+
