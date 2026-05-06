@@ -2,12 +2,12 @@ namespace SentraSence.Api.Models;
 
 public class AudioClip
 {
-    public Guid AudioId { get; set; }
+    public Guid AudioClipId { get; set; }
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    public Guid? AlarmId { get; set; }
+    public Guid? AlarmEventId { get; set; }
     public AlarmEvent? AlarmEvent { get; set; }
 
     public string StorageUrl { get; set; } = null!;
