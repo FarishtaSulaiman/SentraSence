@@ -2,9 +2,9 @@ namespace SentraSence.Api.Models;
 
 public class AlarmLocation
 {
-    public Guid LocationId { get; set; }
+    public Guid AlarmLocationId { get; set; }
 
-    public Guid AlarmId { get; set; }
+    public Guid AlarmEventId { get; set; }
     public AlarmEvent AlarmEvent { get; set; } = null!;
 
     public double Lat { get; set; }

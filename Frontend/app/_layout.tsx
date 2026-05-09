@@ -27,7 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="security-setup" />
         <Stack.Screen name="alarm" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" />
+        {/* <Stack.Screen name="modal" /> */}
       </Stack>
 
       <StatusBar style="light" />
