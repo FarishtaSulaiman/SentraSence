@@ -62,6 +62,32 @@ useEffect(() => {
 
       console.log("Google user:", userInfo);
 
+      const backendResponse = await fetch(
+        "http://localhost:5255/api/auth/google",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            googleId: userInfo.id,
+            picture: userInfo.picture,
+          }),
+        },
+      );
+
+      if (!backendResponse.ok) {
+        const errorText = await backendResponse.text();
+        console.error("Backend login failed:", backendResponse.status, errorText);
+        throw new Error("Backend login failed");
+      }
+
+      const appUser = await backendResponse.json();
+
+      console.log("App user:", appUser);
+
       router.push("/");
     } catch (error) {
       console.error("Google login error:", error);
