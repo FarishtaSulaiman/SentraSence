@@ -2,7 +2,7 @@ namespace SentraSence.Api.Models;
 
 public class TrustedContact
 {
-    public Guid ContactId { get; set; }
+    public Guid TrustedContactId { get; set; }
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;

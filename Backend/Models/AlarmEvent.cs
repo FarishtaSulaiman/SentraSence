@@ -2,7 +2,7 @@ namespace SentraSence.Api.Models;
 
 public class AlarmEvent
 {
-    public Guid AlarmId { get; set; }
+    public Guid AlarmEventId { get; set; }
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;

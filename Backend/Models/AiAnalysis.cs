@@ -2,9 +2,9 @@ namespace SentraSence.Api.Models;
 
 public class AiAnalysis
 {
-    public Guid AnalysisId { get; set; }
+    public Guid AiAnalysisId { get; set; }
 
-    public Guid AudioId { get; set; }
+    public Guid AudioClipId { get; set; }
     public AudioClip AudioClip { get; set; } = null!;
 
     public string ModelName { get; set; } = null!;
