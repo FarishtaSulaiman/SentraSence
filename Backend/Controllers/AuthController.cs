@@ -58,4 +58,47 @@ public class AuthController : ControllerBase
             Name = user.Name
         });
     }
+
+    [HttpPost("google/register")]
+public async Task<ActionResult<AuthUserResponse>> GoogleRegister(
+    [FromBody] GoogleLoginRequest request
+)
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return BadRequest("Email is required.");
+    }
+
+    var normalizedEmail = request.Email.Trim().ToLower();
+
+    var existingUser = await _dbContext.Users
+        .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+    if (existingUser is not null)
+    {
+        return Conflict(new
+        {
+            message = "A user with this email already exists."
+        });
+    }
+
+    var user = new User
+    {
+        UserId = Guid.NewGuid(),
+        Email = normalizedEmail,
+        Name = request.Name,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow
+    };
+
+    _dbContext.Users.Add(user);
+    await _dbContext.SaveChangesAsync();
+
+    return Ok(new AuthUserResponse
+    {
+        UserId = user.UserId,
+        Email = user.Email,
+        Name = user.Name
+    });
+}
 }
