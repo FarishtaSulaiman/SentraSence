@@ -11,6 +11,7 @@ import { router } from "expo-router";
 export default function Register() {
   const [biometricLogin, setBiometricLogin] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedUserTerms, setAcceptedUserTerms] = useState(false); 
 
   return (
     <SentraScreen>
@@ -53,7 +54,20 @@ export default function Register() {
             secureTextEntry
             style={styles.inputSpacing}
           />
+
           <View style={styles.checkboxWrapper}>
+            {/* NYTT: Godkänn användarvillkor + integritetspolicy */}
+            <View style={styles.checkboxRow}>
+              <View style={styles.checkboxContent}>
+                <SentraCheckbox
+                  label="Jag godkänner användarvillkor och integritetspolicy"
+                  checked={acceptedUserTerms}
+                  onToggle={() => setAcceptedUserTerms(!acceptedUserTerms)}
+                />
+              </View>
+
+              <SentraInfoButton onPress={() => router.push("/privacy-info")} />
+            </View>
             <View style={styles.checkboxRow}>
               <View style={styles.checkboxContent}>
                 <SentraCheckbox
