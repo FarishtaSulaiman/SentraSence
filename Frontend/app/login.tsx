@@ -78,6 +78,25 @@ useEffect(() => {
         },
       );
 
+      if (backendResponse.status === 404) {
+        Alert.alert(
+          "Konto saknas",
+          "Du behöver registrera dig innan du kan logga in med Google.",
+          [
+            {
+              text: "Gå till registrering",
+              onPress: () => router.push("/register"),
+            },
+            {
+              text: "Avbryt",
+              style: "cancel",
+            },
+          ],
+        );
+
+        return;
+      }
+
       if (!backendResponse.ok) {
         const errorText = await backendResponse.text();
         console.error("Backend login failed:", backendResponse.status, errorText);
@@ -140,13 +159,14 @@ useEffect(() => {
 
         <SentraButton title="Logga in" onPress={() => router.push("/")} />
 
-        <Pressable
-          disabled={!request}
-          onPress={() => promptAsync()}
+        <SentraButton
+          title="Logga in med Google"
+          onPress={() => {
+            if (!request) return;
+            promptAsync();
+          }}
           style={styles.googleButton}
-        >
-          <Text style={styles.googleButtonText}>Fortsätt med Google</Text>
-        </Pressable>
+        />
 
       </View>
 
@@ -230,12 +250,6 @@ const styles = StyleSheet.create({
   },
 
   googleButton: {
-    width: "78%",
-    height: 46,
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 14,
     marginBottom: 18,
   },

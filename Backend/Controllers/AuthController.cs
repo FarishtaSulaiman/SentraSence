@@ -34,19 +34,16 @@ public class AuthController : ControllerBase
 
         if (user is null)
         {
-            user = new User
+            return NotFound(new
             {
-                UserId = Guid.NewGuid(),
-                Email = normalizedEmail,
-                Name = request.Name,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
+                message = "No registered user found for this Google account."
+            });
         }
-        else
+
+        user.Name = request.Name ?? user.Name;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
         {
             user.Name = request.Name ?? user.Name;
             user.UpdatedAt = DateTime.UtcNow;
