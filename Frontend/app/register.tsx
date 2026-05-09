@@ -39,26 +39,11 @@ export default function Register() {
   });
 
   const handleCreateAccount = () => {
-    setErrorMessage("");
-
-    if (!acceptedUserTerms) {
-      setErrorMessage(
-        "Du behöver godkänna användarvillkor och integritetspolicy för att skapa konto.",
-      );
-      return;
-    }
-
-    if (!locationSharingAccepted) {
-      setErrorMessage(
-        "Du behöver godkänna att din plats kan delas med dina nödkontakter när ett nödlarm aktiveras.",
-      );
-      return;
-    }
-
-    Alert.alert("Konto skapat", "Ditt konto har skapats. Du kan nu logga in.");
-
+    console.log("REGISTER EMAIL BUTTON PRESSED");
+    setErrorMessage(
+      "Just nu använder vi Google för att skapa konto. E-post och lösenord kopplas in senare om vi väljer att stödja det.",
+    );
     // Registreringslogiken kopplas in senare
-    router.push("/login");
   };
 
   const handleGoogleRegisterPress = () => {
@@ -138,7 +123,11 @@ export default function Register() {
 
         if (!backendResponse.ok) {
           const errorText = await backendResponse.text();
-          console.error("Google register failed:", backendResponse.status, errorText);
+          console.error(
+            "Google register failed:",
+            backendResponse.status,
+            errorText,
+          );
           throw new Error("Google register failed");
         }
 
