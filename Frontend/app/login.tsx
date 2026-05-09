@@ -99,7 +99,11 @@ useEffect(() => {
 
       if (!backendResponse.ok) {
         const errorText = await backendResponse.text();
-        console.error("Backend login failed:", backendResponse.status, errorText);
+        console.error(
+          "Backend login failed:",
+          backendResponse.status,
+          errorText,
+        );
         throw new Error("Backend login failed");
       }
 
@@ -107,7 +111,8 @@ useEffect(() => {
 
       console.log("App user:", appUser);
 
-      router.push("/");
+      router.push("/"); // byt senare ut mot exempelvis nedan:
+      // router.replace("/dashboard");
     } catch (error) {
       console.error("Google login error:", error);
       Alert.alert("Fel", "Något gick fel vid Google-inloggning.");
