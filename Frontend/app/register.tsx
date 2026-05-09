@@ -10,6 +10,7 @@ import SentraCheckbox from "@/components/SentraCheckbox";
 import { router } from "expo-router";
 
 export default function Register() {
+  const [biometricLogin, setBiometricLogin] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   return (
@@ -18,17 +19,24 @@ export default function Register() {
         <SentraLogo size="large" />
 
         <View style={styles.subtitleWrapper}>
-          <Text style={styles.subtitle}>Skapa ditt konto</Text>
+          <Text style={styles.title}>Skapa konto</Text>
           <Text style={styles.subtitle}>
-            Registrera dig för att komma igång.
+            Börja använda trygghetsfunktionerna direkt.
           </Text>
         </View>
 
         <View style={styles.form}>
           <SentraInput
             icon="person"
-            placeholder="Namn"
+            placeholder="Förnamn"
             autoCapitalize="words"
+          />
+
+          <SentraInput
+            icon="person"
+            placeholder="Efternamn"
+            autoCapitalize="words"
+            style={styles.inputSpacing}
           />
 
           <SentraInput
@@ -54,17 +62,21 @@ export default function Register() {
           />
         </View>
 
-        <SentraCheckbox
-          label="Jag godkänner villkoren"
-          checked={acceptedTerms}
-          onToggle={() => setAcceptedTerms(!acceptedTerms)}
-        />
+        <View style={styles.checkboxWrapper}>
+          <SentraCheckbox
+            label="Aktivera biometrisk inloggning"
+            checked={biometricLogin}
+            onToggle={() => setBiometricLogin(!biometricLogin)}
+          />
+
+          <SentraCheckbox
+            label="Tillåt platsdelning vid nödlarm"
+            checked={acceptedTerms}
+            onToggle={() => setAcceptedTerms(!acceptedTerms)}
+          />
+        </View>
 
         <SentraButton title="Skapa konto" onPress={() => router.push("/")} />
-
-        <Pressable style={styles.googleButton}>
-          <Text style={styles.googleButtonText}>Registrera med Google</Text>
-        </Pressable>
       </View>
 
       <View style={styles.footer}>
@@ -84,16 +96,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  title: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+
   subtitle: {
     color: "#DDEAF0",
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
     textAlign: "center",
   },
 
   subtitleWrapper: {
     alignItems: "center",
-    marginBottom: 22,
+    marginBottom: 18,
   },
 
   form: {
@@ -102,6 +122,13 @@ const styles = StyleSheet.create({
 
   inputSpacing: {
     marginTop: 10,
+  },
+
+  checkboxWrapper: {
+    width: "78%",
+    marginTop: 10,
+    marginBottom: 14,
+    gap: 6,
   },
 
   footer: {
@@ -123,22 +150,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     alignSelf: "center",
-  },
-
-  googleButton: {
-    width: "78%",
-    height: 46,
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 14,
-    marginBottom: 18,
-  },
-
-  googleButtonText: {
-    color: "#1F2A33",
-    fontSize: 14,
-    fontWeight: "700",
   },
 });
