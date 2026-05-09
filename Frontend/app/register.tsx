@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import SentraScreen from "@/components/SentraScreen";
 import SentraLogo from "@/components/SentraLogo";
 import SentraInput from "@/components/SentraInput";
@@ -10,8 +10,32 @@ import { router } from "expo-router";
 
 export default function Register() {
   const [biometricLogin, setBiometricLogin] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [acceptedUserTerms, setAcceptedUserTerms] = useState(false); 
+  const [acceptedUserTerms, setAcceptedUserTerms] = useState(false);
+  const [locationSharingAccepted, setLocationSharingAccepted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+const handleCreateAccount = () => {
+  setErrorMessage("");
+
+  if (!acceptedUserTerms) {
+    setErrorMessage(
+      "Du behöver godkänna användarvillkor och integritetspolicy för att skapa konto.",
+    );
+    return;
+  }
+
+  if (!locationSharingAccepted) {
+    setErrorMessage(
+      "Du behöver godkänna att din plats kan delas med dina nödkontakter när ett nödlarm aktiveras.",
+    );
+    return;
+  }
+
+  Alert.alert("Konto skapat", "Ditt konto har skapats. Du kan nu logga in.");
+
+  // Registreringslogiken kopplas in senare
+  router.push("/login");
+};
 
   return (
     <SentraScreen>
@@ -83,9 +107,11 @@ export default function Register() {
             <View style={styles.checkboxRow}>
               <View style={styles.checkboxContent}>
                 <SentraCheckbox
-                  label="Tillåt platsdelning vid nödlarm"
-                  checked={acceptedTerms}
-                  onToggle={() => setAcceptedTerms(!acceptedTerms)}
+                  label="Jag förstår att min plats kan delas vid nödlarm"
+                  checked={locationSharingAccepted}
+                  onToggle={() =>
+                    setLocationSharingAccepted(!locationSharingAccepted)
+                  }
                 />
               </View>
               <SentraInfoButton
@@ -93,7 +119,12 @@ export default function Register() {
               />
             </View>
           </View>
-          <SentraButton title="Skapa konto" onPress={() => router.push("/")} />
+
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+
+          <SentraButton title="Skapa konto" onPress={handleCreateAccount} />
         </View>
         <View style={styles.footer}>
           <Text style={styles.footerText}>Har du redan ett konto?</Text>
@@ -141,7 +172,7 @@ const styles = StyleSheet.create({
   },
 
   checkboxWrapper: {
-    width: "78%",
+    width: "100%",
     marginTop: 10,
     marginBottom: 14,
     gap: 6,
@@ -177,5 +208,14 @@ const styles = StyleSheet.create({
 
   checkboxContent: {
     flex: 1,
+  },
+
+  errorText: {
+    color: "#FFB4B4",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: -10,
   },
 });
