@@ -1,73 +1,77 @@
-# Guide: Google Auth – Installation & Setup
+GoogleAuth är nu mergat i `dev` ✅
 
-## Frontend (React Native/Expo)
+För att köra projektet lokalt efter att ni dragit ner senaste `dev`, gör så här:
 
-1. **Installera nödvändiga paket**
-   ```sh
-   npx expo install expo-auth-session expo-google-auth-session
-   ```
+## 1. Hämta senaste dev
 
-2. **Skapa OAuth 2.0 Client ID**
-   - Gå till [Google Cloud Console](https://console.cloud.google.com/).
-   - Skapa ett nytt projekt (eller välj befintligt).
-   - Aktivera "Google Sign-In" API.
-   - Skapa OAuth 2.0 Client ID för "Android" och/eller "iOS".
-   - Spara `clientId` för respektive plattform.
+```bash
+git checkout dev
+git pull origin dev
+```
 
-3. **Lägg till Google Auth i koden**
-   - Importera och använd `useAuthRequest` från `expo-auth-session/providers/google`.
-   - Exempel:
-     ```tsx
-     import * as Google from 'expo-auth-session/providers/google';
-     // ...i din komponent:
-     const [request, response, promptAsync] = Google.useAuthRequest({
-       clientId: 'DIN_CLIENT_ID',
-       // ev. androidClientId, iosClientId, webClientId
-     });
-     ```
+## 2. Frontend
 
-4. **Hantera svaret**
-   - När användaren loggar in, hantera `response` och skicka token till backend för verifiering.
+Gå till frontend-mappen:
 
-5. **Extra: Android & iOS konfiguration**
-   - Följ Expo-dokumentationen för att lägga till rätt `intent-filters` (Android) och URL-scheman (iOS).
+```bash
+cd Frontend
+npm install
+```
 
-6. **Dokumentation**
-   - [Expo Google Auth](https://docs.expo.dev/guides/authentication/#google)
+GoogleAuth använder paketet:
 
----
+```bash
+npx expo install expo-auth-session
+```
 
-## Backend (.NET)
+I koden används Google-providern så här:
 
-1. **Installera Google Auth NuGet-paket**
-   ```sh
-   dotnet add package Google.Apis.Auth
-   ```
+```tsx
+import * as Google from "expo-auth-session/providers/google";
+```
 
-2. **Verifiera ID-token**
-   - Ta emot ID-token från frontend.
-   - Verifiera med Google:
-     ```csharp
-     using Google.Apis.Auth;
-     var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
-     // payload.Email, payload.Name, etc.
-     ```
+Starta frontend:
 
-3. **Hantera användarlogik**
-   - Skapa eller hämta användare i databasen baserat på Google-kontot.
+```bash
+npx expo start
+```
 
-4. **Dokumentation**
-   - [Google.Apis.Auth på NuGet](https://www.nuget.org/packages/Google.Apis.Auth)
-   - [Google Sign-In för servrar](https://developers.google.com/identity/sign-in/web/backend-auth)
+## 3. Backend
 
----
+Gå till backend-mappen:
 
-## Tips
+```bash
+cd Backend
+dotnet restore
+```
 
-- Spara aldrig hemliga nycklar i frontend.
-- Testa i både utvecklings- och produktionsmiljö.
-- Se till att redirect-URI:er är korrekt konfigurerade i Google Cloud Console.
+Lägg in connection string via User Secrets:
 
----
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "ER_CONNECTION_STRING"
+```
 
-Behöver ni kodexempel eller hjälp med någon del, säg till!
+Starta backend:
+
+```bash
+dotnet run
+```
+
+## 4. Testa GoogleAuth
+
+När både frontend och backend kör:
+
+1. Gå till login/register.
+2. Tryck på Google-knappen.
+3. Välj Google-konto.
+4. Frontend hämtar Google user.
+5. Frontend skickar `email`, `name`, `googleId` och `picture` till backend.
+6. Backend hämtar/skapar användaren i databasen.
+7. Backend returnerar `appUser`.
+
+## Viktigt just nu
+
+Vi använder just nu GoogleAuth som aktiv auth för MVP.
+
+E-post/lösenord-login, vanlig registrering och forgot password är pausat/utkommenterat tills vi bestämmer om vi ska stödja det senare.
