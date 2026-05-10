@@ -6,6 +6,7 @@ import SentraInput from "@/components/SentraInput";
 import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -23,6 +24,7 @@ const GOOGLE_IOS_CLIENT_ID =
   "384117481196-k3uh01friqqcp6rq0apkpdhinafa2o3d.apps.googleusercontent.com";
 
 export default function Login() {
+  const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -112,8 +114,8 @@ export default function Login() {
 
         console.log("App user:", appUser);
 
-        router.push("/"); // byt senare ut mot exempelvis nedan:
-        // router.replace("/dashboard");
+        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name });
+        router.replace("/security-setup");
       } catch (error) {
         console.error("Google login error:", error);
         Alert.alert("Fel", "Något gick fel vid Google-inloggning.");

@@ -44,12 +44,6 @@ public class AuthController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
-        {
-            user.Name = request.Name ?? user.Name;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            await _dbContext.SaveChangesAsync();
-        }
 
         return Ok(new AuthUserResponse
         {

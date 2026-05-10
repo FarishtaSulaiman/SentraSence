@@ -7,6 +7,7 @@ import SentraButton from "@/components/SentraButton";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import SentraInfoButton from "@/components/SentraInfoButton";
 import { router } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -24,6 +25,7 @@ const GOOGLE_IOS_CLIENT_ID =
   "384117481196-k3uh01friqqcp6rq0apkpdhinafa2o3d.apps.googleusercontent.com";
 
 export default function Register() {
+  const { setUser } = useAuth();
   const [biometricLogin, setBiometricLogin] = useState(false);
   const [acceptedUserTerms, setAcceptedUserTerms] = useState(false);
   const [locationSharingAccepted, setLocationSharingAccepted] = useState(false);
@@ -135,16 +137,8 @@ export default function Register() {
 
         console.log("Registered app user:", appUser);
 
-        Alert.alert(
-          "Konto skapat",
-          "Ditt konto har skapats med Google. Du kan nu logga in.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.push("/login"),
-            },
-          ],
-        );
+        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name });
+        router.replace("/security-setup");
       } catch (error) {
         console.error("Google register error:", error);
         Alert.alert("Fel", "Något gick fel vid registrering med Google.");
