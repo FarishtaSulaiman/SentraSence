@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     width: "100%",
     maxWidth: 400,
+    alignSelf: "center", // viktig
     paddingHorizontal: 28,
     paddingTop: 70,
     paddingBottom: 48,
