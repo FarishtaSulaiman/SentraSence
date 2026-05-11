@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ImageBackground,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -18,7 +19,17 @@ export default function SentraScreen({ children }: Props) {
         resizeMode="cover"
       >
         <View style={styles.overlay}>
-          <View style={styles.inner}>{children}</View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.inner}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+            alwaysBounceHorizontal={false}
+          >
+            {children}
+          </ScrollView>
         </View>
       </ImageBackground>
     </View>
@@ -29,7 +40,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#020B14",
-    overflow: "hidden",
   },
 
   background: {
@@ -44,12 +54,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  inner: {
+  scrollView: {
     flex: 1,
+    width: "100%",
+  },
+
+  inner: {
+    flexGrow: 1,
     width: "100%",
     maxWidth: 400,
     paddingHorizontal: 28,
-    paddingTop: 150,
+    paddingTop: 70,
     paddingBottom: 48,
     alignItems: "center",
   },

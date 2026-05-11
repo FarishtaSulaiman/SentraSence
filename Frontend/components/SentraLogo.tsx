@@ -24,8 +24,7 @@ export default function SentraLogo({ size = "medium" }: Props) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: -150,
-    marginBottom: -90,
+    alignItems: "center",
   },
 
   logo: {

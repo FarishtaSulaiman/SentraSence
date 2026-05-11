@@ -26,12 +26,10 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
-  const redirectUri = AuthSession.makeRedirectUri();
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri,
-    responseType: "token",
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     scopes: ["profile", "email"],
   });
 
@@ -125,9 +123,9 @@ export default function Login() {
   return (
     <SentraScreen>
       <View style={styles.content}>
-        <SentraLogo size="large" />
-
-        {/* <Text style={styles.title}>Logga in</Text> */}
+        <View style={styles.logoWrapper}>
+          <SentraLogo size="large" />
+        </View>
 
         <View style={styles.subtitleWrapper}>
           <Text style={styles.subtitle}>Välkommen tillbaka!</Text>
@@ -213,6 +211,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 10,
     marginBottom: 10,
+  },
+
+  logoWrapper: {
+    marginBottom: -95,
+    alignItems: "center",
   },
 
   subtitle: {

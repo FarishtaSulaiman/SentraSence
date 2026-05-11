@@ -10,7 +10,6 @@ import { router } from "expo-router";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,12 +28,10 @@ export default function Register() {
   const [locationSharingAccepted, setLocationSharingAccepted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const redirectUri = AuthSession.makeRedirectUri();
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri,
-    responseType: "token",
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     scopes: ["profile", "email"],
   });
 
@@ -291,6 +288,7 @@ const styles = StyleSheet.create({
 
   subtitleWrapper: {
     alignItems: "center",
+    marginTop: -85,
     marginBottom: 18,
   },
 
