@@ -6,6 +6,7 @@ import SentraInput from "@/components/SentraInput";
 import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -34,7 +35,7 @@ export default function Login() {
 
   const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
     if (isSecuritySetupCompleted) {
-      router.replace("/dashboard");
+      router.replace("/(tabs)/index" as any);
     } else {
       router.replace("/security-setup");
     }
@@ -193,13 +194,13 @@ export default function Login() {
           }}
         />
 
-        <SentraButton
+        <GoogleAuthButton
           title="Logga in med Google"
+          disabled={!request}
           onPress={() => {
             if (!request) return;
             promptAsync();
           }}
-          style={styles.googleButton}
         />
 
         <SentraButton

@@ -10,6 +10,7 @@ import { router } from "expo-router";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -248,10 +249,13 @@ export default function Register() {
 
           <SentraButton title="Skapa konto" onPress={handleCreateAccount} />
 
-          <SentraButton
+          <GoogleAuthButton
             title="Registrera med Google"
-            onPress={handleGoogleRegisterPress}
-            style={styles.googleButton}
+            disabled={!request}
+            onPress={() => {
+              if (!request) return;
+              promptAsync();
+            }}
           />
         </View>
         <View style={styles.footer}>
