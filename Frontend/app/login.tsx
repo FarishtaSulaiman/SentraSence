@@ -6,11 +6,10 @@ import SentraInput from "@/components/SentraInput";
 import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
-import { useAuth } from "@/contexts/AuthContext";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,18 +23,23 @@ const GOOGLE_IOS_CLIENT_ID =
   "384117481196-k3uh01friqqcp6rq0apkpdhinafa2o3d.apps.googleusercontent.com";
 
 export default function Login() {
-  const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
-  const redirectUri = AuthSession.makeRedirectUri();
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri,
-    responseType: "token",
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     scopes: ["profile", "email"],
   });
+
+  const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
+    if (isSecuritySetupCompleted) {
+      router.replace("/(tabs)/index" as any);
+    } else {
+      router.replace("/security-setup");
+    }
+  };
 
   useEffect(() => {
     const handleGoogleLogin = async () => {
@@ -113,9 +117,16 @@ export default function Login() {
         const appUser = await backendResponse.json();
 
         console.log("App user:", appUser);
+        console.log(
+          "Security setup completed:",
+          appUser?.securitySetupCompleted,
+        );
 
-        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name });
-        router.replace("/security-setup");
+        const isSecuritySetupCompleted =
+          appUser?.securitySetupCompleted ?? false;
+
+        navigateAfterLogin(isSecuritySetupCompleted);
+        
       } catch (error) {
         console.error("Google login error:", error);
         Alert.alert("Fel", "Något gick fel vid Google-inloggning.");
@@ -124,12 +135,13 @@ export default function Login() {
 
     handleGoogleLogin();
   }, [response]);
+  
   return (
     <SentraScreen>
       <View style={styles.content}>
-        <SentraLogo size="large" />
-
-        {/* <Text style={styles.title}>Logga in</Text> */}
+        <View style={styles.logoWrapper}>
+          <SentraLogo size="large" />
+        </View>
 
         <View style={styles.subtitleWrapper}>
           <Text style={styles.subtitle}>Välkommen tillbaka!</Text>
@@ -182,11 +194,20 @@ export default function Login() {
           }}
         />
 
-        <SentraButton
+        <GoogleAuthButton
           title="Logga in med Google"
+          disabled={!request}
           onPress={() => {
             if (!request) return;
             promptAsync();
+          }}
+        />
+
+        <SentraButton
+          title="Testa i Expo utan Google"
+          onPress={() => {
+            console.log("MOCK EXPO LOGIN → security setup");
+            router.replace("/security-setup");
           }}
           style={styles.googleButton}
         />
@@ -215,6 +236,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 10,
     marginBottom: 10,
+  },
+
+  logoWrapper: {
+    marginBottom: -95,
+    alignItems: "center",
   },
 
   subtitle: {

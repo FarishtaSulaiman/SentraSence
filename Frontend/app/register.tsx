@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,12 +31,10 @@ export default function Register() {
   const [locationSharingAccepted, setLocationSharingAccepted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const redirectUri = AuthSession.makeRedirectUri();
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri,
-    responseType: "token",
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     scopes: ["profile", "email"],
   });
 
@@ -245,10 +243,13 @@ export default function Register() {
 
           <SentraButton title="Skapa konto" onPress={handleCreateAccount} />
 
-          <SentraButton
+          <GoogleAuthButton
             title="Registrera med Google"
-            onPress={handleGoogleRegisterPress}
-            style={styles.googleButton}
+            disabled={!request}
+            onPress={() => {
+              if (!request) return;
+              promptAsync();
+            }}
           />
         </View>
         <View style={styles.footer}>
@@ -285,6 +286,7 @@ const styles = StyleSheet.create({
 
   subtitleWrapper: {
     alignItems: "center",
+    marginTop: -85,
     marginBottom: 18,
   },
 

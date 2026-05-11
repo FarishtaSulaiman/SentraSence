@@ -9,7 +9,9 @@ export default function LandingPage() {
   return (
     <SentraScreen>
       <View style={styles.content}>
-        <SentraLogo size="large" />
+        <View style={styles.logoWrapper}>
+          <SentraLogo size="large" />
+        </View>
 
         <Text style={styles.title}>Din trygghetsapp vid nödsituationer</Text>
 
@@ -37,6 +39,11 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
   content: {
     width: "100%",
+    alignItems: "center",
+  },
+
+  logoWrapper: {
+    marginBottom: -95,
     alignItems: "center",
   },
 

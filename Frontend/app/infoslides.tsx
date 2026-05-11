@@ -55,7 +55,9 @@ export default function InfoSlides() {
     <SentraScreen>
       <View style={styles.page}>
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-          <SentraLogo size="large" />
+          <View style={styles.logoWrapper}>
+            <SentraLogo size="large" />
+          </View>
 
           <Text style={styles.title}>{slides[current].title}</Text>
 
@@ -91,6 +93,11 @@ const styles = StyleSheet.create({
 
   content: {
     width: "100%",
+    alignItems: "center",
+  },
+
+  logoWrapper: {
+    marginBottom: -95,
     alignItems: "center",
   },
 
