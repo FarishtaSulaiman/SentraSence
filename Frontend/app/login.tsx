@@ -9,7 +9,6 @@ import SentraCheckbox from "@/components/SentraCheckbox";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,6 +31,14 @@ export default function Login() {
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     scopes: ["profile", "email"],
   });
+
+  const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
+    if (isSecuritySetupCompleted) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/security-setup");
+    }
+  };
 
   useEffect(() => {
     const handleGoogleLogin = async () => {
@@ -109,9 +116,16 @@ export default function Login() {
         const appUser = await backendResponse.json();
 
         console.log("App user:", appUser);
+        console.log(
+          "Security setup completed:",
+          appUser?.securitySetupCompleted,
+        );
 
-        router.push("/"); // byt senare ut mot exempelvis nedan:
-        // router.replace("/dashboard");
+        const isSecuritySetupCompleted =
+          appUser?.securitySetupCompleted ?? false;
+
+        navigateAfterLogin(isSecuritySetupCompleted);
+        
       } catch (error) {
         console.error("Google login error:", error);
         Alert.alert("Fel", "Något gick fel vid Google-inloggning.");
@@ -120,6 +134,7 @@ export default function Login() {
 
     handleGoogleLogin();
   }, [response]);
+  
   return (
     <SentraScreen>
       <View style={styles.content}>
@@ -183,6 +198,15 @@ export default function Login() {
           onPress={() => {
             if (!request) return;
             promptAsync();
+          }}
+          style={styles.googleButton}
+        />
+
+        <SentraButton
+          title="Testa i Expo utan Google"
+          onPress={() => {
+            console.log("MOCK EXPO LOGIN → security setup");
+            router.replace("/security-setup");
           }}
           style={styles.googleButton}
         />
