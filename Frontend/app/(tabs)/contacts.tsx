@@ -25,7 +25,7 @@ type Contact = {
   isPrimary: boolean;
 };
 
-// ─── Contact Modal (lägg till / redigera) ─────────────────────────────────────
+// Contact Modal (lägg till / redigera) 
 
 function ContactModal({
   visible,
@@ -458,7 +458,7 @@ export default function Contacts() {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────────
+//  Styles
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#08141D" },
