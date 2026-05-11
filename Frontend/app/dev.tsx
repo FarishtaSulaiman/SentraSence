@@ -9,6 +9,8 @@ const pages = [
   { label: "Login", route: "/login" },
   { label: "Forgot Password", route: "/forgot-password" },
   { label: "Security Setup", route: "/security-setup" },
+  { label: "Integritetspolicy", route: "/privacy-info" },
+  { label: "Användarvillkor", route: "/terms" },
   { label: "Alarm", route: "/alarm" },
   { label: "Hem (Tab)", route: "/(tabs)/" },
   { label: "Contacts (Tab)", route: "/(tabs)/contacts" },

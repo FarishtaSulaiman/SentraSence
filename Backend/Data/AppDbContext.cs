@@ -17,8 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<TrustedContact> TrustedContacts => Set<TrustedContact>();
     public DbSet<AiAnalysis> AiAnalyses => Set<AiAnalysis>();
-   
-    
+    public DbSet<UserConsent> UserConsents => Set<UserConsent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
