@@ -22,6 +22,9 @@ const GOOGLE_ANDROID_CLIENT_ID =
 const GOOGLE_IOS_CLIENT_ID =
   "384117481196-k3uh01friqqcp6rq0apkpdhinafa2o3d.apps.googleusercontent.com";
 
+  // TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
+  const API_BASE_URL = "http://192.168.68.104:5255";
+
 export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
@@ -69,21 +72,20 @@ export default function Login() {
 
         console.log("Google user:", userInfo);
 
-        const backendResponse = await fetch(
-          "http://localhost:5255/api/auth/google",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: userInfo.email,
-              name: userInfo.name,
-              googleId: userInfo.id,
-              picture: userInfo.picture,
-            }),
+        // const backendResponse = await fetch(
+        //   "http://localhost:5255/api/auth/google",
+        const backendResponse = await fetch(`${API_BASE_URL}/api/auth/google`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            googleId: userInfo.id,
+            picture: userInfo.picture,
+          }),
+        });
 
         if (backendResponse.status === 404) {
           Alert.alert(
