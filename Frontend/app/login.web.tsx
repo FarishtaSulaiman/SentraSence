@@ -8,30 +8,25 @@ import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  isSuccessResponse,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
 
-// TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-const API_BASE_URL = "http://192.168.8.6:5255";
+// Webb körs på samma dator som backend, därför localhost här
+const API_BASE_URL = "http://localhost:5255";
 
-export default function Login() {
+export default function LoginWeb() {
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
-  // KONFIGURERAR NATIVE GOOGLE SIGN-IN
-  // webClientId är Web Client ID från Google Cloud Console
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-    });
-  }, []);
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ["profile", "email"],
+  });
 
   const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
     if (isSecuritySetupCompleted) {
@@ -41,109 +36,98 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      // Kontrollerar att Google Play Services finns på Android-enheten
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
+  useEffect(() => {
+    const handleGoogleLogin = async () => {
+      if (response?.type !== "success") return;
 
-      // Öppnar native Google-kontoväljare
-      const googleResponse = await GoogleSignin.signIn();
+      console.log("Google web response:", response);
 
-      // Om användaren avbryter händer inget
-      if (!isSuccessResponse(googleResponse)) {
-        console.log("Google sign-in cancelled.");
+      const accessToken =
+        response.authentication?.accessToken ?? response.params?.access_token;
+
+      if (!accessToken) {
+        Alert.alert("Fel", "Kunde inte hämta access token från Google.");
         return;
       }
 
-      const googleUser = googleResponse.data.user;
-
-      console.log("Google user:", googleUser);
-
-      const backendResponse = await fetch(`${API_BASE_URL}/api/auth/google`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: googleUser.email,
-          name: googleUser.name ?? googleUser.email,
-          googleId: googleUser.id,
-          picture: googleUser.photo,
-        }),
-      });
-
-      if (backendResponse.status === 404) {
-        Alert.alert(
-          "Konto saknas",
-          "Du behöver registrera dig innan du kan logga in med Google.",
-          [
-            {
-              text: "Gå till registrering",
-              onPress: () => router.push("/register"),
+      try {
+        const userInfoResponse = await fetch(
+          "https://www.googleapis.com/userinfo/v2/me",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
             },
-            {
-              text: "Avbryt",
-              style: "cancel",
-            },
-          ],
+          },
         );
 
-        return;
-      }
+        const userInfo = await userInfoResponse.json();
 
-      if (!backendResponse.ok) {
-        const errorText = await backendResponse.text();
+        console.log("Google web user:", userInfo);
 
-        console.error(
-          "Backend login failed:",
-          backendResponse.status,
-          errorText,
-        );
+        const backendResponse = await fetch(`${API_BASE_URL}/api/auth/google`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            googleId: userInfo.id,
+            picture: userInfo.picture,
+          }),
+        });
 
-        throw new Error("Backend login failed");
-      }
+        if (backendResponse.status === 404) {
+          Alert.alert(
+            "Konto saknas",
+            "Du behöver registrera dig innan du kan logga in med Google.",
+            [
+              {
+                text: "Gå till registrering",
+                onPress: () => router.push("/register"),
+              },
+              {
+                text: "Avbryt",
+                style: "cancel",
+              },
+            ],
+          );
 
-      const appUser = await backendResponse.json();
-
-      console.log("App user:", appUser);
-      console.log("Security setup completed:", appUser?.securitySetupCompleted);
-
-      const isSecuritySetupCompleted = appUser?.securitySetupCompleted ?? false;
-
-      navigateAfterLogin(isSecuritySetupCompleted);
-    } catch (error) {
-      console.error("Google login error:", error);
-
-      if (isErrorWithCode(error)) {
-        switch (error.code) {
-          case statusCodes.IN_PROGRESS:
-            Alert.alert(
-              "Vänta",
-              "Google-inloggning pågår redan. Försök igen om en stund.",
-            );
-            return;
-
-          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            Alert.alert(
-              "Google Play saknas",
-              "Google Play Services saknas eller behöver uppdateras på enheten.",
-            );
-            return;
-
-          default:
-            Alert.alert(
-              "Fel",
-              `Google-inloggning misslyckades. Kod: ${error.code}`,
-            );
-            return;
+          return;
         }
-      }
 
-      Alert.alert("Fel", "Något gick fel vid Google-inloggning.");
-    }
-  };
+        if (!backendResponse.ok) {
+          const errorText = await backendResponse.text();
+
+          console.error(
+            "Backend login failed:",
+            backendResponse.status,
+            errorText,
+          );
+
+          throw new Error("Backend login failed");
+        }
+
+        const appUser = await backendResponse.json();
+
+        console.log("App user:", appUser);
+        console.log(
+          "Security setup completed:",
+          appUser?.securitySetupCompleted,
+        );
+
+        const isSecuritySetupCompleted =
+          appUser?.securitySetupCompleted ?? false;
+
+        navigateAfterLogin(isSecuritySetupCompleted);
+      } catch (error) {
+        console.error("Google web login error:", error);
+        Alert.alert("Fel", "Något gick fel vid Google-inloggning.");
+      }
+    };
+
+    handleGoogleLogin();
+  }, [response]);
 
   return (
     <SentraScreen>
@@ -205,7 +189,11 @@ export default function Login() {
 
         <GoogleAuthButton
           title="Logga in med Google"
-          onPress={handleGoogleLogin}
+          disabled={!request}
+          onPress={() => {
+            if (!request) return;
+            promptAsync();
+          }}
         />
 
         <SentraButton
