@@ -53,6 +53,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register your services
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService>();
 
 var app = builder.Build();
 
