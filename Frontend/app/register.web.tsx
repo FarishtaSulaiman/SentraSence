@@ -8,44 +8,37 @@ import SentraCheckbox from "@/components/SentraCheckbox";
 import SentraInfoButton from "@/components/SentraInfoButton";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  isSuccessResponse,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
+WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
 
-// TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-const API_BASE_URL = "http://192.168.8.6:5255";
-
 export default function Register() {
   const { setUser } = useAuth();
-
   const [biometricLogin, setBiometricLogin] = useState(false);
   const [acceptedUserTerms, setAcceptedUserTerms] = useState(false);
   const [locationSharingAccepted, setLocationSharingAccepted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-    });
-  }, []);
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ["profile", "email"],
+  });
 
   const handleCreateAccount = () => {
     console.log("REGISTER EMAIL BUTTON PRESSED");
-
     setErrorMessage(
       "Just nu använder vi Google för att skapa konto. E-post och lösenord kopplas in senare om vi väljer att stödja det.",
     );
+    // Registreringslogiken kopplas in senare
   };
 
-  const handleGoogleRegisterPress = async () => {
+  const handleGoogleRegisterPress = () => {
     setErrorMessage("");
 
     if (!acceptedUserTerms) {
@@ -62,127 +55,111 @@ export default function Register() {
       return;
     }
 
-    try {
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-
-      const googleResponse = await GoogleSignin.signIn();
-
-      if (!isSuccessResponse(googleResponse)) {
-        console.log("Google registration cancelled.");
-        return;
-      }
-
-      const googleUser = googleResponse.data.user;
-
-      console.log("Google register user:", googleUser);
-
-      const backendResponse = await fetch(
-        `${API_BASE_URL}/api/auth/google/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: googleUser.email,
-            name: googleUser.name ?? googleUser.email,
-            googleId: googleUser.id,
-            picture: googleUser.photo,
-          }),
-        },
-      );
-
-      if (backendResponse.status === 409) {
-        setErrorMessage(
-          "Det finns redan ett konto med den här e-postadressen. Logga in istället.",
-        );
-
-        return;
-      }
-
-      if (!backendResponse.ok) {
-        const errorText = await backendResponse.text();
-
-        console.error(
-          "Google register failed:",
-          backendResponse.status,
-          errorText,
-        );
-
-        throw new Error("Google register failed");
-      }
-
-      const appUser = await backendResponse.json();
-
-      console.log("Registered app user:", appUser);
-
-      setUser({
-        userId: appUser.userId,
-        email: appUser.email,
-        name: appUser.name,
-      });
-
-      router.replace("/security-setup");
-    } catch (error) {
-      console.error("Google register error:", error);
-
-      if (isErrorWithCode(error)) {
-        switch (error.code) {
-          case statusCodes.IN_PROGRESS:
-            Alert.alert(
-              "Vänta",
-              "Google-registrering pågår redan. Försök igen om en stund.",
-            );
-            return;
-
-          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            Alert.alert(
-              "Google Play saknas",
-              "Google Play Services saknas eller behöver uppdateras på enheten.",
-            );
-            return;
-
-          default:
-            Alert.alert(
-              "Fel",
-              `Google-registrering misslyckades. Kod: ${error.code}`,
-            );
-            return;
-        }
-      }
-
-      Alert.alert("Fel", "Något gick fel vid registrering med Google.");
+    if (!request) {
+      Alert.alert("Google Auth", "Google-inloggningen är inte redo ännu.");
+      return;
     }
+
+    promptAsync();
   };
+
+  useEffect(() => {
+    const handleGoogleRegister = async () => {
+      if (response?.type !== "success") return;
+
+      const accessToken =
+        response.authentication?.accessToken ?? response.params?.access_token;
+
+      if (!accessToken) {
+        Alert.alert("Fel", "Kunde inte hämta access token från Google.");
+        return;
+      }
+
+      try {
+        const userInfoResponse = await fetch(
+          "https://www.googleapis.com/userinfo/v2/me",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        );
+
+        const userInfo = await userInfoResponse.json();
+
+        console.log("Google register user:", userInfo);
+
+        const backendResponse = await fetch(
+          "http://localhost:5255/api/auth/google/register",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: userInfo.email,
+              name: userInfo.name,
+              googleId: userInfo.id,
+              picture: userInfo.picture,
+            }),
+          },
+        );
+
+        if (backendResponse.status === 409) {
+          setErrorMessage(
+            "Det finns redan ett konto med den här e-postadressen. Logga in istället.",
+          );
+
+          return;
+        }
+
+        if (!backendResponse.ok) {
+          const errorText = await backendResponse.text();
+          console.error(
+            "Google register failed:",
+            backendResponse.status,
+            errorText,
+          );
+          throw new Error("Google register failed");
+        }
+
+        const appUser = await backendResponse.json();
+
+        console.log("Registered app user:", appUser);
+
+        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name });
+        router.replace("/security-setup");
+      } catch (error) {
+        console.error("Google register error:", error);
+        Alert.alert("Fel", "Något gick fel vid registrering med Google.");
+      }
+    };
+
+    handleGoogleRegister();
+  }, [response]);
 
   return (
     <SentraScreen>
       <View style={styles.content}>
         <SentraLogo size="large" />
-
         <View style={styles.subtitleWrapper}>
           <Text style={styles.title}>Skapa konto</Text>
           <Text style={styles.subtitle}>
             Börja använda trygghetsfunktionerna direkt.
           </Text>
         </View>
-
         <View style={styles.form}>
           <SentraInput
             icon="person"
             placeholder="Förnamn"
             autoCapitalize="words"
           />
-
           <SentraInput
             icon="person"
             placeholder="Efternamn"
             autoCapitalize="words"
             style={styles.inputSpacing}
           />
-
           <SentraInput
             icon="mail"
             placeholder="E-post"
@@ -190,14 +167,12 @@ export default function Register() {
             autoCapitalize="none"
             style={styles.inputSpacing}
           />
-
           <SentraInput
             icon="lock-closed"
             placeholder="Lösenord"
             secureTextEntry
             style={styles.inputSpacing}
           />
-
           <SentraInput
             icon="lock-closed"
             placeholder="Bekräfta lösenord"
@@ -206,6 +181,7 @@ export default function Register() {
           />
 
           <View style={styles.checkboxWrapper}>
+            {/* NYTT: Godkänn användarvillkor + integritetspolicy */}
             <View style={styles.checkboxRow}>
               <View style={styles.checkboxContent}>
                 <SentraCheckbox
@@ -217,7 +193,6 @@ export default function Register() {
 
               <SentraInfoButton onPress={() => router.push("/privacy-info")} />
             </View>
-
             <View style={styles.checkboxRow}>
               <View style={styles.checkboxContent}>
                 <SentraCheckbox
@@ -226,12 +201,10 @@ export default function Register() {
                   onToggle={() => setBiometricLogin(!biometricLogin)}
                 />
               </View>
-
               <SentraInfoButton
                 onPress={() => router.push("/biometric-info")}
               />
             </View>
-
             <View style={styles.checkboxRow}>
               <View style={styles.checkboxContent}>
                 <SentraCheckbox
@@ -242,7 +215,6 @@ export default function Register() {
                   }
                 />
               </View>
-
               <SentraInfoButton
                 onPress={() => router.push("/location-sharing-info")}
               />
@@ -266,12 +238,12 @@ export default function Register() {
 
         <GoogleAuthButton
           title="Registrera med Google"
+          disabled={!request}
           onPress={handleGoogleRegisterPress}
         />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Har du redan ett konto?</Text>
-
           <Pressable onPress={() => router.push("/login")}>
             <Text style={styles.loginText}> Logga in</Text>
           </Pressable>
