@@ -20,4 +20,8 @@ public class User
     public ICollection<AudioClip> AudioClips { get; set; } = new List<AudioClip>();
     public ICollection<AlarmEvent> AlarmEvents { get; set; } = new List<AlarmEvent>();
     public ICollection<UserConsent> Consents { get; set; } = new List<UserConsent>();
+
+    // Push notifications
+    public ICollection<PushNotificationToken> PushNotificationTokens { get; set; } = new List<PushNotificationToken>();
+
 }
