@@ -1,6 +1,38 @@
 @SentraSence.Api_HostAddress = http://localhost:5255
 
-GET {{SentraSence.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+# ── Byt ut detta mot ett riktigt userId från databasen ────────────────────────
+@userId = 00000000-0000-0000-0000-000000000000
+@alarmEventId = 00000000-0000-0000-0000-000000000000
+
+###
+# 1. Trigga ett larm (kopiera alarmEventId från svaret)
+POST {{SentraSence.Api_HostAddress}}/api/alarm/trigger
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "lat": 59.334591,
+  "lon": 18.063240,
+  "triggerType": "Manual"
+}
+
+###
+# 2. Uppdatera position
+POST {{SentraSence.Api_HostAddress}}/api/alarm/{{alarmEventId}}/location
+Content-Type: application/json
+
+{
+  "lat": 59.335100,
+  "lon": 18.064000,
+  "accuracy": 10.5
+}
+
+###
+# 3. Bekräfta larm — skickar e-post till kontakter med e-postadress
+POST {{SentraSence.Api_HostAddress}}/api/alarm/{{alarmEventId}}/confirm
+
+###
+# 4. Avbryt larm (inget mail)
+POST {{SentraSence.Api_HostAddress}}/api/alarm/{{alarmEventId}}/cancel
 
 ###

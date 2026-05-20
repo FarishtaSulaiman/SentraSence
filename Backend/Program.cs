@@ -40,6 +40,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register your services
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
