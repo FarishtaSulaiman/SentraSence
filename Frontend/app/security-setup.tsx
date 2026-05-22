@@ -16,8 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { API } from "@/config/api";
 
-const API = "http://localhost:5255";
 const CONSENT_VERSION = "1.0";
 
 // ─── Step indicator ────────────────────────────────────────────────────────────

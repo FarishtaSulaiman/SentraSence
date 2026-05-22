@@ -13,8 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-
-const API = "http://localhost:5255";
+import { API } from "@/config/api";
 
 type Contact = {
   trustedContactId?: string;
