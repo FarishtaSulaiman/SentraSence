@@ -8,7 +8,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import SentraTopBar from "@/components/SentraTopBar";
+import { useAuth } from "@/contexts/AuthContext";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -38,6 +40,9 @@ function QuickAction({
 
 // Dashboard 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const showTrainingBanner = user && !user.codewordTrained;
+
   return (
     <SafeAreaView style={styles.safe}>
       <SentraTopBar />
@@ -60,7 +65,7 @@ export default function Dashboard() {
         </View>
 
         {/* Greeting */}
-        <Text style={styles.greeting}>Hej, Farishta!</Text>
+        <Text style={styles.greeting}>Hej, {user?.name ?? "där"}!</Text>
         <Text style={styles.greetingSub}>
           Du är <Text style={styles.highlight}>skyddad</Text> och allt fungerar som det ska.
         </Text>
@@ -83,6 +88,23 @@ export default function Dashboard() {
           <Ionicons name="chevron-forward" size={16} color="#4A6070" />
         </Pressable>
 
+        {/* AI-träning saknas — banner */}
+        {showTrainingBanner && (
+          <Pressable
+            style={styles.trainingBanner}
+            onPress={() => router.push("/security-setup" as any)}
+          >
+            <View style={styles.trainingBannerLeft}>
+              <Ionicons name="mic-outline" size={20} color="#F39C12" />
+              <View style={{ marginLeft: 10, flex: 1 }}>
+                <Text style={styles.trainingBannerTitle}>AI-kodordsträning saknas</Text>
+                <Text style={styles.trainingBannerSub}>Tryck här för att slutföra träningen</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#F39C12" />
+          </Pressable>
+        )}
+
         {/* Quick actions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Snabbåtgärder</Text>
@@ -92,7 +114,13 @@ export default function Dashboard() {
         </View>
 
         <View style={styles.quickGrid}>
-          <QuickAction icon="warning" label="Aktivera larm" sublabel="Nödsituation" color="#E63946" />
+          <Pressable style={styles.quickAction} onPress={() => router.push("/alarm" as any)}>
+            <View style={[styles.quickActionIcon, { backgroundColor: "#E6394622" }]}>
+              <Ionicons name="warning" size={22} color="#E63946" />
+            </View>
+            <Text style={styles.quickActionLabel}>Aktivera larm</Text>
+            <Text style={styles.quickActionSub}>Nödsituation</Text>
+          </Pressable>
           <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" />
           <QuickAction icon="call" label="Ring kontakt" sublabel="Snabbval" color="#00D8E6" />
           <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" />
@@ -187,7 +215,7 @@ export default function Dashboard() {
               <Text style={styles.alarmDesc}>Larm går direkt till dina kontakter.</Text>
             </View>
           </View>
-          <Pressable style={styles.alarmBtn}>
+          <Pressable style={styles.alarmBtn} onPress={() => router.push("/alarm" as any)}>
             <Text style={styles.alarmBtnText}>Aktivera larm</Text>
           </Pressable>
         </View>
@@ -500,6 +528,32 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "800",
+  },
+  trainingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#2A2410",
+    borderWidth: 1,
+    borderColor: "#F39C1240",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  trainingBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  trainingBannerTitle: {
+    color: "#F39C12",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  trainingBannerSub: {
+    color: "#AAAAAA",
+    fontSize: 11,
+    marginTop: 2,
   },
 });
 

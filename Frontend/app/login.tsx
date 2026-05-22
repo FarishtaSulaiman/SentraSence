@@ -7,6 +7,7 @@ import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   GoogleSignin,
@@ -22,6 +23,7 @@ const GOOGLE_WEB_CLIENT_ID =
 const API_BASE_URL = "http://192.168.8.6:5255";
 
 export default function Login() {
+  const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -109,6 +111,13 @@ export default function Login() {
 
       console.log("App user:", appUser);
       console.log("Security setup completed:", appUser?.securitySetupCompleted);
+
+      setUser({
+        userId: appUser.userId,
+        email: appUser.email,
+        name: appUser.name,
+        codewordTrained: appUser.codewordTrained ?? false,
+      });
 
       const isSecuritySetupCompleted = appUser?.securitySetupCompleted ?? false;
 

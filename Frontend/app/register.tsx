@@ -122,6 +122,7 @@ export default function Register() {
         userId: appUser.userId,
         email: appUser.email,
         name: appUser.name,
+        codewordTrained: appUser.codewordTrained ?? false,
       });
 
       router.replace("/security-setup");
