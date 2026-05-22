@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
+  Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,23 +14,26 @@ import { router } from "expo-router";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
+const API = "http://localhost:5255";
 
-// Quick action button 
+type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
+type Contact = { trustedContactId: string; name: string; phone: string; isPrimary: boolean };
 
 function QuickAction({
   icon,
   label,
   sublabel,
   color,
+  onPress,
 }: {
   icon: IoniconsName;
   label: string;
   sublabel: string;
   color: string;
+  onPress?: () => void;
 }) {
   return (
-    <Pressable style={styles.quickAction}>
+    <Pressable style={styles.quickAction} onPress={onPress}>
       <View style={[styles.quickActionIcon, { backgroundColor: color + "22" }]}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
@@ -42,6 +47,36 @@ function QuickAction({
 export default function Dashboard() {
   const { user } = useAuth();
   const showTrainingBanner = user && !user.codewordTrained;
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${API}/api/contacts/${user.userId}`)
+      .then((r) => r.json())
+      .then(setContacts)
+      .catch(() => {});
+  }, [user]);
+
+  const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
+
+  const handleCallContact = () => {
+    if (!primaryContact) return;
+    Linking.openURL(`tel:${primaryContact.phone}`);
+  };
+
+  const handleShareLocation = () => {
+    if (Platform.OS === "web") {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => {
+          const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+          window.open(url, "_blank");
+        },
+        () => alert("Kunde inte hämta din position.")
+      );
+    } else {
+      Linking.openURL("https://maps.google.com/");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -121,9 +156,9 @@ export default function Dashboard() {
             <Text style={styles.quickActionLabel}>Aktivera larm</Text>
             <Text style={styles.quickActionSub}>Nödsituation</Text>
           </Pressable>
-          <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" />
-          <QuickAction icon="call" label="Ring kontakt" sublabel="Snabbval" color="#00D8E6" />
-          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" />
+          <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" onPress={handleShareLocation} />
+          <QuickAction icon="call" label="Ring kontakt" sublabel={primaryContact?.name ?? "Snabbval"} color="#00D8E6" onPress={handleCallContact} />
+          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" onPress={() => router.push("/security-setup" as any)} />
         </View>
 
         {/* Status cards row */}
@@ -151,11 +186,13 @@ export default function Dashboard() {
               <Text style={styles.infoCardTitle}>Nödkontakter</Text>
               <Ionicons name="people" size={14} color="#00D8E6" />
             </View>
-            <Text style={styles.infoCardActive}>3 kontakter</Text>
-            <Text style={styles.infoCardDesc}>
-              Dina kontakter är redo att larmas vid behov.
+            <Text style={styles.infoCardActive}>
+              {contacts.length > 0 ? `${contacts.length} kontakt${contacts.length !== 1 ? "er" : ""}` : "Inga kontakter"}
             </Text>
-            <Pressable style={styles.cardLink}>
+            <Text style={styles.infoCardDesc}>
+              {contacts.length > 0 ? "Dina kontakter är redo att larmas vid behov." : "Lägg till nöd­kontakter under Kontakter."}
+            </Text>
+            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/contacts" as any)}>
               <Text style={styles.cardLinkText}>Visa kontakter</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -173,7 +210,7 @@ export default function Dashboard() {
             <Text style={styles.infoCardDesc}>
               Din position delas vid larm med dina kontakter.
             </Text>
-            <Pressable style={styles.cardLink}>
+            <Pressable style={styles.cardLink} onPress={handleShareLocation}>
               <Text style={styles.cardLinkText}>Visa på karta</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -196,7 +233,7 @@ export default function Dashboard() {
                 <Text style={styles.eventTime}>{e.time}</Text>
               </View>
             ))}
-            <Pressable style={styles.cardLink}>
+            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/history" as any)}>
               <Text style={styles.cardLinkText}>Visa historik</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>

@@ -37,7 +37,7 @@ export default function Login() {
 
   const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
     if (isSecuritySetupCompleted) {
-      router.replace("/(tabs)/index" as any);
+      router.replace("/(tabs)" as any);
     } else {
       router.replace("/security-setup");
     }

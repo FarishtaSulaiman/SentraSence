@@ -11,14 +11,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Location from "expo-location";
+import { Platform } from "react-native";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = "http://localhost:5255";
 
+function getPosition(): Promise<{ lat: number; lon: number; accuracy?: number }> {
+  if (Platform.OS === "web") {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve({ lat: 0, lon: 0 });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined }),
+        (err) => { console.error("[GPS] geolocation error:", err.code, err.message); resolve({ lat: 0, lon: 0 }); },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  }
+  return Location.requestForegroundPermissionsAsync().then(({ status }) => {
+    if (status !== "granted") return { lat: 0, lon: 0 };
+    return Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).then(
+      (loc) => ({ lat: loc.coords.latitude, lon: loc.coords.longitude, accuracy: loc.coords.accuracy ?? undefined })
+    );
+  });
+}
+
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
-// ─── Status row item ───────────────────────────────────────────────────────────
+// ─── Status item component ─────────────────────────────────────────────────
 
 function StatusItem({
   icon,
@@ -132,17 +152,7 @@ export default function AlarmScreen() {
 
     async function triggerAlarm() {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        let lat = 0;
-        let lon = 0;
-
-        if (status === "granted") {
-          const loc = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
-          lat = loc.coords.latitude;
-          lon = loc.coords.longitude;
-        }
+        const { lat, lon } = await getPosition();
 
         const res = await fetch(`${API_BASE}/api/alarm/trigger`, {
           method: "POST",
@@ -179,17 +189,11 @@ export default function AlarmScreen() {
   function startLocationTracking(eventId: string) {
     locationIntervalRef.current = setInterval(async () => {
       try {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const { lat, lon, accuracy } = await getPosition();
         await fetch(`${API_BASE}/api/alarm/${eventId}/location`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lat: loc.coords.latitude,
-            lon: loc.coords.longitude,
-            accuracy: loc.coords.accuracy,
-          }),
+          body: JSON.stringify({ lat, lon, accuracy }),
         });
       } catch {
         // Silent fail — position update is best-effort
@@ -201,14 +205,10 @@ export default function AlarmScreen() {
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     if (alarmEventId) {
       try {
-        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/cancel`, {
-          method: "POST",
-        });
-      } catch {
-        // Navigate anyway
-      }
+        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/cancel`, { method: "POST" });
+      } catch {}
     }
-    router.back();
+    router.replace("/(tabs)" as any);
   }
 
   async function handleConfirm() {
@@ -356,14 +356,14 @@ export default function AlarmScreen() {
         <View style={styles.buttonRow}>
           <Pressable style={styles.cancelBtn} onPress={handleCancel}>
             <Ionicons
-              name="close-circle-outline"
+              name={isConfirmed ? "home-outline" : "close-circle-outline"}
               size={16}
               color="#FFFFFF"
               style={{ marginRight: 6 }}
             />
             <View>
-              <Text style={styles.cancelTitle}>Det är falsklarm</Text>
-              <Text style={styles.cancelSub}>Avbryt och stoppa larm</Text>
+              <Text style={styles.cancelTitle}>{isConfirmed ? "Gå till hem" : "Det är falsklarm"}</Text>
+              <Text style={styles.cancelSub}>{isConfirmed ? "Stäng larm" : "Avbryt och stoppa larm"}</Text>
             </View>
           </Pressable>
 
