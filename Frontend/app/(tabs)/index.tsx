@@ -5,10 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Button,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import SentraTopBar from "@/components/SentraTopBar";
+
+import { router } from "expo-router";
+
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -59,6 +63,10 @@ export default function Dashboard() {
           </Pressable>
         </View>
 
+<Button
+  title="Gå till Vosk Test"
+  onPress={() => router.push("/native/VoskTestScreen")}
+/>
         {/* Greeting */}
         <Text style={styles.greeting}>Hej, Farishta!</Text>
         <Text style={styles.greetingSub}>
