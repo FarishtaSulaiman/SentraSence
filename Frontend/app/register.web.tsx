@@ -127,7 +127,7 @@ export default function Register() {
 
         console.log("Registered app user:", appUser);
 
-        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name });
+        setUser({ userId: appUser.userId, email: appUser.email, name: appUser.name, codewordTrained: appUser.codewordTrained ?? false });
         router.replace("/security-setup");
       } catch (error) {
         console.error("Google register error:", error);

@@ -30,6 +30,7 @@ public class AuthController : ControllerBase
         var normalizedEmail = request.Email.Trim().ToLower();
 
         var user = await _dbContext.Users
+            .Include(u => u.Consents)
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
         if (user is null)
@@ -49,7 +50,9 @@ public class AuthController : ControllerBase
         {
             UserId = user.UserId,
             Email = user.Email,
-            Name = user.Name
+            Name = user.Name,
+            CodewordTrained = user.CodewordTrained,
+            SecuritySetupCompleted = user.Consents.Any(c => c.ConsentType == "terms_of_service" && c.Granted)
         });
     }
 
@@ -92,7 +95,9 @@ public async Task<ActionResult<AuthUserResponse>> GoogleRegister(
     {
         UserId = user.UserId,
         Email = user.Email,
-        Name = user.Name
+        Name = user.Name,
+        CodewordTrained = user.CodewordTrained,
+        SecuritySetupCompleted = false // Ny användare har inte slutfört setup ännu
     });
 }
 }

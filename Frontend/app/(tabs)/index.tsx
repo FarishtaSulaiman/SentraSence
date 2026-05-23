@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,31 +6,35 @@ import {
   ScrollView,
   Pressable,
   Button,
+  Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import SentraTopBar from "@/components/SentraTopBar";
-
 import { router } from "expo-router";
+import SentraTopBar from "@/components/SentraTopBar";
+import { useAuth } from "@/contexts/AuthContext";
 
+const API = "http://localhost:5255";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
-
-// Quick action button 
+type Contact = { trustedContactId: string; name: string; phone: string; isPrimary: boolean };
 
 function QuickAction({
   icon,
   label,
   sublabel,
   color,
+  onPress,
 }: {
   icon: IoniconsName;
   label: string;
   sublabel: string;
   color: string;
+  onPress?: () => void;
 }) {
   return (
-    <Pressable style={styles.quickAction}>
+    <Pressable style={styles.quickAction} onPress={onPress}>
       <View style={[styles.quickActionIcon, { backgroundColor: color + "22" }]}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
@@ -42,6 +46,39 @@ function QuickAction({
 
 // Dashboard 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const showTrainingBanner = user && !user.codewordTrained;
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${API}/api/contacts/${user.userId}`)
+      .then((r) => r.json())
+      .then(setContacts)
+      .catch(() => {});
+  }, [user]);
+
+  const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
+
+  const handleCallContact = () => {
+    if (!primaryContact) return;
+    Linking.openURL(`tel:${primaryContact.phone}`);
+  };
+
+  const handleShareLocation = () => {
+    if (Platform.OS === "web") {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => {
+          const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+          window.open(url, "_blank");
+        },
+        () => alert("Kunde inte hämta din position.")
+      );
+    } else {
+      Linking.openURL("https://maps.google.com/");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <SentraTopBar />
@@ -68,7 +105,7 @@ export default function Dashboard() {
   onPress={() => router.push("/native/VoskTestScreen")}
 />
         {/* Greeting */}
-        <Text style={styles.greeting}>Hej, Farishta!</Text>
+        <Text style={styles.greeting}>Hej, {user?.name ?? "där"}!</Text>
         <Text style={styles.greetingSub}>
           Du är <Text style={styles.highlight}>skyddad</Text> och allt fungerar som det ska.
         </Text>
@@ -91,6 +128,23 @@ export default function Dashboard() {
           <Ionicons name="chevron-forward" size={16} color="#4A6070" />
         </Pressable>
 
+        {/* AI-träning saknas — banner */}
+        {showTrainingBanner && (
+          <Pressable
+            style={styles.trainingBanner}
+            onPress={() => router.push("/security-setup" as any)}
+          >
+            <View style={styles.trainingBannerLeft}>
+              <Ionicons name="mic-outline" size={20} color="#F39C12" />
+              <View style={{ marginLeft: 10, flex: 1 }}>
+                <Text style={styles.trainingBannerTitle}>AI-kodordsträning saknas</Text>
+                <Text style={styles.trainingBannerSub}>Tryck här för att slutföra träningen</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#F39C12" />
+          </Pressable>
+        )}
+
         {/* Quick actions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Snabbåtgärder</Text>
@@ -100,10 +154,16 @@ export default function Dashboard() {
         </View>
 
         <View style={styles.quickGrid}>
-          <QuickAction icon="warning" label="Aktivera larm" sublabel="Nödsituation" color="#E63946" />
-          <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" />
-          <QuickAction icon="call" label="Ring kontakt" sublabel="Snabbval" color="#00D8E6" />
-          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" />
+          <Pressable style={styles.quickAction} onPress={() => router.push("/alarm" as any)}>
+            <View style={[styles.quickActionIcon, { backgroundColor: "#E6394622" }]}>
+              <Ionicons name="warning" size={22} color="#E63946" />
+            </View>
+            <Text style={styles.quickActionLabel}>Aktivera larm</Text>
+            <Text style={styles.quickActionSub}>Nödsituation</Text>
+          </Pressable>
+          <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" onPress={handleShareLocation} />
+          <QuickAction icon="call" label="Ring kontakt" sublabel={primaryContact?.name ?? "Snabbval"} color="#00D8E6" onPress={handleCallContact} />
+          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" onPress={() => router.push("/security-setup" as any)} />
         </View>
 
         {/* Status cards row */}
@@ -131,11 +191,13 @@ export default function Dashboard() {
               <Text style={styles.infoCardTitle}>Nödkontakter</Text>
               <Ionicons name="people" size={14} color="#00D8E6" />
             </View>
-            <Text style={styles.infoCardActive}>3 kontakter</Text>
-            <Text style={styles.infoCardDesc}>
-              Dina kontakter är redo att larmas vid behov.
+            <Text style={styles.infoCardActive}>
+              {contacts.length > 0 ? `${contacts.length} kontakt${contacts.length !== 1 ? "er" : ""}` : "Inga kontakter"}
             </Text>
-            <Pressable style={styles.cardLink}>
+            <Text style={styles.infoCardDesc}>
+              {contacts.length > 0 ? "Dina kontakter är redo att larmas vid behov." : "Lägg till nöd­kontakter under Kontakter."}
+            </Text>
+            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/contacts" as any)}>
               <Text style={styles.cardLinkText}>Visa kontakter</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -153,7 +215,7 @@ export default function Dashboard() {
             <Text style={styles.infoCardDesc}>
               Din position delas vid larm med dina kontakter.
             </Text>
-            <Pressable style={styles.cardLink}>
+            <Pressable style={styles.cardLink} onPress={handleShareLocation}>
               <Text style={styles.cardLinkText}>Visa på karta</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -176,7 +238,7 @@ export default function Dashboard() {
                 <Text style={styles.eventTime}>{e.time}</Text>
               </View>
             ))}
-            <Pressable style={styles.cardLink}>
+            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/history" as any)}>
               <Text style={styles.cardLinkText}>Visa historik</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -195,7 +257,7 @@ export default function Dashboard() {
               <Text style={styles.alarmDesc}>Larm går direkt till dina kontakter.</Text>
             </View>
           </View>
-          <Pressable style={styles.alarmBtn}>
+          <Pressable style={styles.alarmBtn} onPress={() => router.push("/alarm" as any)}>
             <Text style={styles.alarmBtnText}>Aktivera larm</Text>
           </Pressable>
         </View>
@@ -508,6 +570,32 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "800",
+  },
+  trainingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#2A2410",
+    borderWidth: 1,
+    borderColor: "#F39C1240",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  trainingBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  trainingBannerTitle: {
+    color: "#F39C12",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  trainingBannerSub: {
+    color: "#AAAAAA",
+    fontSize: 11,
+    marginTop: 2,
   },
 });
 
