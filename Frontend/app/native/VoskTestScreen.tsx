@@ -1,34 +1,30 @@
-import React, { useEffect } from "react";
-import { View, Text } from "react-native";
-import * as Vosk from "react-native-vosk";
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
 
+// Web stub – Vosk (kodordslyssning) är ej tillgänglig i webbläsare
 export default function VoskTestScreen() {
-  useEffect(() => {
-    async function init() {
-      try {
-        console.log("Vosk object:", Vosk);
-
-        await Vosk.loadModel("model-sv-se");
-        console.log("Modellen laddades!");
-
-        await Vosk.start({
-          grammar: ["hjälp", "hjälp mig", "[unk]"],
-        });
-
-        Vosk.onResult((res) => {
-          console.log("Resultat:", res);
-        });
-      } catch (e) {
-        console.error("Vosk error:", e);
-      }
-    }
-
-    init();
-  }, []);
-
   return (
-    <View>
-      <Text>Vosk Test</Text>
+    <View style={styles.container}>
+      <Text style={styles.text}>
+        Kodordslyssning är inte tillgänglig i webbläsaren.{"\n"}
+        Använd appen på mobil för att träna och aktivera kodordet.
+      </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0A1A25",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  text: {
+    color: "#8AAABB",
+    textAlign: "center",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+});
