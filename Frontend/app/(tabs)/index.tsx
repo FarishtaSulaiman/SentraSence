@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Button,
   Linking,
   Platform,
 } from "react-native";
@@ -99,6 +100,10 @@ export default function Dashboard() {
           </Pressable>
         </View>
 
+<Button
+  title="Gå till Vosk Test"
+  onPress={() => router.push("/native/VoskTestScreen")}
+/>
         {/* Greeting */}
         <Text style={styles.greeting}>Hej, {user?.name ?? "där"}!</Text>
         <Text style={styles.greetingSub}>
