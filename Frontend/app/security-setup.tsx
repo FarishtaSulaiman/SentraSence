@@ -274,8 +274,8 @@ function Step1({ onNext }: { onNext: () => void }) {
             att invända mot behandling (Art. 21).{"\n\n"}
             Samtycke kan återkallas när som helst via Inställningar utan att det
             påverkar behandling som skett dessförinnan (Art. 7.3 GDPR).{"\n\n"}
-            <Text style={styles.expandBold}>Kontakt:</Text> privacy@sentrasense.se{"\n"}
-            <Text style={styles.expandBold}>Klagomål:</Text> IMY (imy.se), 08-657 61 00
+            <Text style={styles.expandBold}>Kontakt:</Text> sentrasence.alert@gmail.com{"\n"}
+            <Text style={styles.expandBold}>Klagomål:</Text> sentrasence.alert@gmail.com
           </Text>
         </View>
       </View>
