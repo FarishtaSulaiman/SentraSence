@@ -20,14 +20,14 @@ builder.Services.AddCors(options =>
                 "http://localhost:8081",
                 "http://127.0.0.1:8081",
 
-                // Näns Expo
+                // Nän
                 // "http://192.168.68.104:8081"
                 "http://192.168.8.6:8081"
 
-                // Alexanders Expo
+                // Alexander
                 // "http://
 
-                // Farishtas Expo
+                // Farishta
                 // "http://
         )
             .AllowAnyHeader()
@@ -57,11 +57,11 @@ builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService
 
 var app = builder.Build();
 
+app.UseHttpsRedirection();
+
 app.UseCors("AllowExpoWeb");
 
 // Map controllers
 app.MapControllers();
-
-app.UseHttpsRedirection();
 
 app.Run();
