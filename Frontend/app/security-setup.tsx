@@ -16,8 +16,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVoskService } from "@/hooks/useVoskService";
 
-const API = "http://localhost:5255";
+//const API = "http://localhost:5255";
+const API = "http://192.168.50.202:5255";
 const CONSENT_VERSION = "1.0";
 
 // ─── Step indicator ────────────────────────────────────────────────────────────
@@ -347,7 +349,6 @@ function Step1({ onNext }: { onNext: () => void }) {
 }
 
 // ─── STEP 2: Välj kodord ───────────────────────────────────────────────────────
-
 const PRESETS = [
   { icon: "moon" as const, label: "Röd måne" },
   { icon: "chatbubble" as const, label: "Hjälp mig" },
@@ -357,22 +358,61 @@ const PRESETS = [
   { icon: "notifications" as const, label: "Larma nu" },
 ];
 
-function Step2({
-  onNext,
-  onBack,
-  codeword,
-  setCodeword,
-}: {
+type Step2Props = {
   onNext: () => void;
   onBack: () => void;
   codeword: string;
-  setCodeword: (v: string) => void;
-}) {
+  setCodeword: (value: string) => void;
+};
+
+export function Step2({ onNext, onBack, codeword, setCodeword }: Step2Props) {
   const { user } = useAuth();
+
+  // Hämta reset från context
+  const { lastResult, reset } = useVoskService();
+
   const [custom, setCustom] = useState(
     PRESETS.some((p) => p.label === codeword) ? "" : codeword
   );
   const [loading, setLoading] = useState(false);
+
+  // Testläge
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"match" | "fail" | null>(null);
+
+  // Frys kodordet vid teststart
+  const [testCodeword, setTestCodeword] = useState("");
+
+  // Vad som sades under testet
+  const [testHeard, setTestHeard] = useState("");
+
+  // När användaren trycker "Testa kodordet"
+  const startTest = () => {
+    reset();                // NOLLSTÄLL ALL GAMMAL TRANSKRIPTION
+    setTestCodeword(codeword);
+    setTestHeard("");
+    setTestResult(null);
+    setIsTesting(true);
+  };
+
+  // När Vosk ger ett nytt resultat under testläge → jämför
+  useEffect(() => {
+    if (!isTesting) return;
+    if (!lastResult) return;
+
+    setTestHeard(lastResult);
+
+    const normalizedHeard = lastResult.toLowerCase().trim();
+    const normalizedCode = testCodeword.toLowerCase().trim();
+
+    if (normalizedHeard === normalizedCode) {
+      setTestResult("match");
+    } else {
+      setTestResult("fail");
+    }
+
+    setIsTesting(false);
+  }, [isTesting, lastResult, testCodeword]);
 
   const selectPreset = (label: string) => {
     setCodeword(label);
@@ -388,8 +428,12 @@ function Step2({
 
   const handleNext = async () => {
     if (!codeword.trim()) return;
-    // Under byggtid (user är null) – hoppar över API-anrop
-    if (!user) { onNext(); return; }
+
+    if (!user) {
+      onNext();
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/users/${user.userId}/codeword`, {
@@ -397,6 +441,7 @@ function Step2({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ codeword: codeword.trim() }),
       });
+
       if (!res.ok) throw new Error();
       onNext();
     } catch {
@@ -407,7 +452,12 @@ function Step2({
   };
 
   return (
-    <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.scrollFlex}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Top bar */}
       <View style={styles.topBar}>
         <Pressable onPress={onBack} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={20} color="#00D8E6" />
@@ -419,33 +469,50 @@ function Step2({
       <Text style={styles.stepLabel}>Steg 2 av 4</Text>
       <Text style={styles.title}>Välj ditt kodord</Text>
       <Text style={styles.subtitle}>
-        Välj ett ord eller fras som är naturligt att säga i en stressad situation men svårt för omgivningen att gissa.
+        Välj en fras som känns naturlig att säga i en stressad situation. Appen
+        lyssnar efter frasen genom att transkribera tal lokalt på enheten.
       </Text>
 
+      {/* Info box */}
       <View style={styles.infoBox}>
         <Ionicons name="mic" size={15} color="#00D8E6" style={{ marginRight: 8 }} />
         <Text style={styles.infoText}>
-          Kodordet bearbetas lokalt på enheten och skickas inte till externa servrar i realtid.
-          Texten sparas krypterat för synkronisering mellan enheter.
+          All röstbearbetning sker lokalt på din enhet. Ingen ljuddata skickas
+          till externa servrar.
         </Text>
       </View>
 
+      {/* Presets */}
       <Text style={styles.sectionLabel}>Föreslagna kodord</Text>
       <View style={styles.presetGrid}>
         {PRESETS.map((p) => (
           <Pressable
             key={p.label}
-            style={[styles.presetChip, codeword === p.label && styles.presetChipActive]}
+            style={[
+              styles.presetChip,
+              codeword === p.label && styles.presetChipActive,
+            ]}
             onPress={() => selectPreset(p.label)}
           >
-            <Ionicons name={p.icon} size={13} color={codeword === p.label ? "#00D8E6" : "#4A6070"} style={{ marginRight: 4 }} />
-            <Text style={[styles.presetText, codeword === p.label && styles.presetTextActive]}>
+            <Ionicons
+              name={p.icon}
+              size={13}
+              color={codeword === p.label ? "#00D8E6" : "#4A6070"}
+              style={{ marginRight: 4 }}
+            />
+            <Text
+              style={[
+                styles.presetText,
+                codeword === p.label && styles.presetTextActive,
+              ]}
+            >
               {p.label}
             </Text>
           </Pressable>
         ))}
       </View>
 
+      {/* Custom input */}
       <View style={styles.dividerRow}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>eller ange eget</Text>
@@ -463,19 +530,68 @@ function Step2({
         <Text style={styles.charCount}>{custom.length}/30</Text>
       </View>
 
+      {/* Test section */}
+      <Text style={styles.sectionLabel}>Testa ditt kodord</Text>
+
+      <View style={styles.testBox}>
+        <Text style={styles.testLabel}>Testresultat:</Text>
+
+        {/* Före test */}
+        {!isTesting && testResult === null && (
+          <Text style={styles.heardTextSmall}>
+            Tryck på “Testa kodordet” för att börja
+          </Text>
+        )}
+
+        {/* Under test */}
+        {isTesting && (
+          <Text style={styles.matchPending}>Lyssnar... säg ditt kodord nu</Text>
+        )}
+
+        {/* Efter test */}
+        {testResult && (
+          <Text style={styles.heardTextSmall}>
+            Du sa: {'"'}{testHeard}{'"'}
+          </Text>
+        )}
+
+        {testResult === "match" && (
+          <Text style={styles.matchSuccess}>✔ Kodordet känns igen!</Text>
+        )}
+
+        {testResult === "fail" && (
+          <Text style={styles.matchFail}>
+            ✖ Det du sa matchade inte kodordet
+          </Text>
+        )}
+
+        {/* Test button */}
+        <Pressable style={styles.testButton} onPress={startTest}>
+          <Ionicons name="mic-circle" size={20} color="#00D8E6" />
+          <Text style={styles.testButtonText}>Testa kodordet</Text>
+        </Pressable>
+      </View>
+
+      {/* Tips */}
       <Text style={styles.sectionLabel}>Tips för ett bra kodord</Text>
       {[
         "Välj något personligt och lätt att minnas.",
-        "Undvik vanliga ord som 'hjälp' – de kan ge falska larm.",
-        "Välj något naturligt att säga högt i en stressad situation.",
+        "Undvik extremt vanliga ord – de kan ge falska larm.",
+        "Välj något du kan säga tydligt även i stress.",
         "Du kan alltid byta kodord i Inställningar.",
       ].map((tip) => (
         <View key={tip} style={styles.tipRow}>
-          <Ionicons name="checkmark-circle" size={14} color="#00D8E6" style={{ marginRight: 6 }} />
+          <Ionicons
+            name="checkmark-circle"
+            size={14}
+            color="#00D8E6"
+            style={{ marginRight: 6 }}
+          />
           <Text style={styles.tipText}>{tip}</Text>
         </View>
       ))}
 
+      {/* Save button */}
       <Pressable
         style={[styles.btn, (!codeword.trim() || loading) && styles.btnDisabled]}
         onPress={handleNext}
@@ -486,18 +602,27 @@ function Step2({
         ) : (
           <>
             <Text style={styles.btnText}>Spara kodord</Text>
-            <Ionicons name="chevron-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color="#fff"
+              style={{ marginLeft: 4 }}
+            />
           </>
         )}
       </Pressable>
 
       <View style={styles.footerRow}>
         <Ionicons name="lock-closed" size={11} color="#4A6070" />
-        <Text style={styles.footerSmall}> Kodordet lagras krypterat och kan ändras i Inställningar.</Text>
+        <Text style={styles.footerSmall}>
+          Kodordet lagras krypterat och kan ändras i Inställningar.
+        </Text>
       </View>
     </ScrollView>
   );
 }
+
+
 
 // ─── STEP 3: Träna kodord (MediaRecorder, fungerar på webb) ───────────────────
 
@@ -588,7 +713,7 @@ function Step3({ onNext, onBack, codeword }: { onNext: () => void; onBack: () =>
 
       <View style={styles.codewordDisplay}>
         <Ionicons name="chatbubble" size={14} color="#00D8E6" style={{ marginRight: 6 }} />
-        <Text style={styles.codewordText}>"{codeword}"</Text>
+        <Text style={styles.codewordText}>{`"${codeword}"`}</Text>
       </View>
 
       <View style={styles.micArea}>
@@ -1069,4 +1194,83 @@ const styles = StyleSheet.create({
   modalInput: { backgroundColor: "rgba(18,34,45,0.9)", borderRadius: 10, borderWidth: 1, borderColor: "#1C3040", color: "#FFFFFF", fontSize: 13, paddingHorizontal: 12, paddingVertical: 10 },
   primaryRow: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 },
   modalError: { color: "#FFB4B4", fontSize: 12, marginBottom: 8, textAlign: "center" },
+
+  testBox: {
+  width: "100%",
+  backgroundColor: "rgba(0,216,230,0.07)",
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "rgba(0,216,230,0.18)",
+  padding: 14,
+  marginTop: 12,
+},
+
+testLabel: {
+  color: "#00D8E6",
+  fontSize: 13,
+  fontWeight: "700",
+  marginBottom: 6,
+},
+
+heardLabel: {
+  color: "#4A6070",
+  fontSize: 11,
+  marginBottom: 4,
+},
+
+heardText: {
+  color: "#FFFFFF",
+  fontSize: 15,
+  fontWeight: "600",
+  marginBottom: 10,
+},
+
+heardTextSmall: {
+  marginTop: 6,
+  color: "#9BB3C8",
+  fontSize: 13,
+  fontStyle: "italic",
+},
+
+matchSuccess: {
+  marginTop: 10,
+  color: "#06D6A0",
+  fontSize: 15,
+  fontWeight: "700",
+},
+
+matchFail: {
+  marginTop: 10,
+  color: "#EF476F",
+  fontSize: 15,
+  fontWeight: "700",
+},
+
+testButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  alignSelf: "flex-start",
+  backgroundColor: "#0A1A24",
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  marginTop: 10,
+  borderWidth: 1,
+  borderColor: "#00D8E6",
+},
+
+testButtonText: {
+  color: "#00D8E6",
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: 6,
+},
+
+matchPending: {
+  marginTop: 10,
+  color: "#FFD166",
+  fontSize: 14,
+  fontWeight: "500",
+},
+
 });
