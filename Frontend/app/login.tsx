@@ -15,12 +15,13 @@ import {
   isSuccessResponse,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import { API } from "@/config/api";
 
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
 
 // TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-const API_BASE_URL = "http://192.168.50.203:5255";
+// const API_BASE_URL = "http://192.168.50.203:5255";
 
 export default function Login() {
   const { setUser } = useAuth();
@@ -63,7 +64,21 @@ export default function Login() {
 
       console.log("Google user:", googleUser);
 
-      const backendResponse = await fetch(`${API_BASE_URL}/api/auth/google`, {
+      console.log("API used for backend login:", API);
+
+      const backendLoginUrl = `${API}/api/auth/google`;
+      console.log("Backend login URL:", backendLoginUrl);
+
+      try {
+        console.log("Testing backend root:", `${API}/`);
+
+        const testResponse = await fetch(`${API}/`);
+        console.log("Backend root test status:", testResponse.status);
+      } catch (testError) {
+        console.error("Backend root test failed:", testError);
+      }
+
+      const backendResponse = await fetch(backendLoginUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

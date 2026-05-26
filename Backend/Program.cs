@@ -58,7 +58,7 @@ builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseCors("AllowExpoWeb");
 
