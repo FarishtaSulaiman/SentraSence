@@ -64,8 +64,8 @@ const SECTIONS: Section[] = [
     content: (
       <Text style={s.p}>
         <Text style={s.b}>SentraSense AB</Text> är personuppgiftsansvarig för din data.{"\n\n"}
-        E-post: privacy@sentrasense.se{"\n"}
-        Dataskyddsombud: dpo@sentrasense.se
+        E-post: sentrasence.alert@gmail.com{"\n"}
+        Dataskyddsombud: sentrasence.alert@gmail.com
       </Text>
     ),
   },
@@ -170,7 +170,7 @@ const SECTIONS: Section[] = [
         ))}
         <Text style={s.p}>
           Kontakta oss på{" "}
-          <Text style={s.link}>privacy@sentrasense.se</Text> för att utöva dina
+          <Text style={s.link}>sentrasence.alert@gmail.com</Text> för att utöva dina
           rättigheter. Vi svarar inom 30 dagar (GDPR-krav).
         </Text>
       </View>
@@ -182,12 +182,10 @@ const SECTIONS: Section[] = [
     icon: "alert-circle",
     content: (
       <Text style={s.p}>
-        Du har rätt att lämna klagomål till tillsynsmyndigheten om du anser att
-        behandlingen av dina personuppgifter strider mot GDPR:{"\n\n"}
-        <Text style={s.b}>Integritetsskyddsmyndigheten (IMY)</Text>{"\n"}
-        Webbplats: imy.se{"\n"}
-        Telefon: 08-657 61 00{"\n"}
-        E-post: imy@imy.se
+        Du har rätt att lämna klagomål om du anser att behandlingen av dina
+        personuppgifter strider mot GDPR:{"\n\n"}
+        <Text style={s.b}>Kontakt SentraSense</Text>{"\n"}
+        E-post: sentrasence.alert@gmail.com
       </Text>
     ),
   },
@@ -298,9 +296,9 @@ export default function PrivacyInfo() {
         <View style={s.contactBox}>
           <Ionicons name="mail" size={16} color="#00D8E6" style={{ marginBottom: 6 }} />
           <Text style={s.contactTitle}>Kontakta oss angående din data</Text>
-          <Text style={s.contactItem}>Allmänna frågor: privacy@sentrasense.se</Text>
-          <Text style={s.contactItem}>Dataskyddsombud: dpo@sentrasense.se</Text>
-          <Text style={s.contactItem}>Tillsynsmyndighet: IMY (imy.se)</Text>
+          <Text style={s.contactItem}>Allmänna frågor: sentrasence.alert@gmail.com</Text>
+          <Text style={s.contactItem}>Dataskyddsombud: sentrasence.alert@gmail.com</Text>
+          <Text style={s.contactItem}>Klagomål: sentrasence.alert@gmail.com</Text>
         </View>
 
         <Pressable style={s.doneBtn} onPress={() => router.back()}>

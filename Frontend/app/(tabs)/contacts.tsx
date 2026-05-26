@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -225,38 +226,35 @@ export default function Contacts() {
     });
   };
 
+  const doDelete = async (c: Contact) => {
+    const isDevContact =
+      userId === "dev" ||
+      !c.trustedContactId ||
+      c.trustedContactId.startsWith("dev-");
+    if (isDevContact) {
+      setContacts((prev) => prev.filter((x) => x.trustedContactId !== c.trustedContactId));
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/contacts/${c.trustedContactId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setContacts((prev) => prev.filter((x) => x.trustedContactId !== c.trustedContactId));
+    } catch {
+      Alert.alert("Fel", "Kunde inte ta bort kontakten.");
+    }
+  };
+
   const handleDelete = (c: Contact) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Ta bort ${c.name}?`)) doDelete(c);
+      return;
+    }
     Alert.alert(
       "Ta bort kontakt",
       `Är du säker på att du vill ta bort ${c.name}?`,
       [
         { text: "Avbryt", style: "cancel" },
-        {
-          text: "Ta bort",
-          style: "destructive",
-          onPress: async () => {
-            const isDevContact =
-              userId === "dev" ||
-              !c.trustedContactId ||
-              c.trustedContactId.startsWith("dev-");
-            if (isDevContact) {
-              setContacts((prev) =>
-                prev.filter((x) => x.trustedContactId !== c.trustedContactId)
-              );
-              return;
-            }
-            try {
-              await fetch(`${API}/api/contacts/${c.trustedContactId}`, {
-                method: "DELETE",
-              });
-              setContacts((prev) =>
-                prev.filter((x) => x.trustedContactId !== c.trustedContactId)
-              );
-            } catch {
-              Alert.alert("Fel", "Kunde inte ta bort kontakten.");
-            }
-          },
-        },
+        { text: "Ta bort", style: "destructive", onPress: () => doDelete(c) },
       ]
     );
   };
@@ -513,7 +511,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#122030",
     paddingRight: 10,
-    overflow: "hidden",
   },
   contactCardPrimary: {
     borderColor: "rgba(0,216,230,0.35)",

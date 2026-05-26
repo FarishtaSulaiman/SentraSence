@@ -274,8 +274,8 @@ function Step1({ onNext }: { onNext: () => void }) {
             att invända mot behandling (Art. 21).{"\n\n"}
             Samtycke kan återkallas när som helst via Inställningar utan att det
             påverkar behandling som skett dessförinnan (Art. 7.3 GDPR).{"\n\n"}
-            <Text style={styles.expandBold}>Kontakt:</Text> privacy@sentrasense.se{"\n"}
-            <Text style={styles.expandBold}>Klagomål:</Text> IMY (imy.se), 08-657 61 00
+            <Text style={styles.expandBold}>Kontakt:</Text> sentrasence.alert@gmail.com{"\n"}
+            <Text style={styles.expandBold}>Klagomål:</Text> sentrasence.alert@gmail.com
           </Text>
         </View>
       </View>
@@ -917,7 +917,7 @@ function Step4({ onFinish, onBack }: { onFinish: () => void; onBack: () => void 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function SecuritySetup() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [step, setStep] = useState(1);
   const [codeword, setCodeword] = useState("");
 
@@ -928,7 +928,13 @@ export default function SecuritySetup() {
 
   const next = () => setStep((s) => Math.min(s + 1, 4));
   const back = () => setStep((s) => Math.max(s - 1, 1));
-  const finish = () => router.replace("/(tabs)");
+  const finish = () => {
+    // Uppdatera context så att hem-sidan reflekterar rätt status direkt
+    if (user) {
+      setUser({ ...user, codewordTrained: user.codewordTrained ?? false });
+    }
+    router.replace("/(tabs)");
+  };
 
   return (
     <SafeAreaView style={styles.safe}>

@@ -7,6 +7,7 @@ import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -20,6 +21,7 @@ const GOOGLE_WEB_CLIENT_ID =
 const API_BASE_URL = "http://localhost:5255";
 
 export default function LoginWeb() {
+  const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -30,7 +32,7 @@ export default function LoginWeb() {
 
   const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
     if (isSecuritySetupCompleted) {
-      router.replace("/(tabs)/index" as any);
+      router.replace("/(tabs)" as any);
     } else {
       router.replace("/security-setup");
     }
@@ -115,6 +117,13 @@ export default function LoginWeb() {
           "Security setup completed:",
           appUser?.securitySetupCompleted,
         );
+
+        setUser({
+          userId: appUser.userId,
+          email: appUser.email,
+          name: appUser.name,
+          codewordTrained: appUser.codewordTrained ?? false,
+        });
 
         const isSecuritySetupCompleted =
           appUser?.securitySetupCompleted ?? false;

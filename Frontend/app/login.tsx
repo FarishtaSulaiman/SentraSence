@@ -7,6 +7,7 @@ import SentraButton from "@/components/SentraButton";
 import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   GoogleSignin,
@@ -19,9 +20,10 @@ const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
 
 // TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-const API_BASE_URL = "http://192.168.8.6:5255";
+const API_BASE_URL = "http://192.168.50.203:5255";
 
 export default function Login() {
+  const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -35,7 +37,7 @@ export default function Login() {
 
   const navigateAfterLogin = (isSecuritySetupCompleted: boolean) => {
     if (isSecuritySetupCompleted) {
-      router.replace("/(tabs)/index" as any);
+      router.replace("/(tabs)" as any);
     } else {
       router.replace("/security-setup");
     }
@@ -109,6 +111,13 @@ export default function Login() {
 
       console.log("App user:", appUser);
       console.log("Security setup completed:", appUser?.securitySetupCompleted);
+
+      setUser({
+        userId: appUser.userId,
+        email: appUser.email,
+        name: appUser.name,
+        codewordTrained: appUser.codewordTrained ?? false,
+      });
 
       const isSecuritySetupCompleted = appUser?.securitySetupCompleted ?? false;
 
