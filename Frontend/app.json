@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.sentrasense.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/SentraShield.png",
         "backgroundColor": "#E6F4FE"
@@ -37,6 +38,7 @@
         }
       ],
       "expo-web-browser",
+      "expo-notifications",
       [
         "expo-build-properties",
         {
@@ -49,6 +51,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7f0bf9fe-55a7-46d7-8609-997d89dbad75"
+      }
+    },
+    "owner": "sentrasense"
   }
 }

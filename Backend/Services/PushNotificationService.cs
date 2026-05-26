@@ -34,27 +34,41 @@ public class PushNotificationService : IPushNotificationService
             return;
         }
 
-        var payload = new
+        var message = new
         {
             to = expoPushToken,
             sound = "default",
             title,
             body,
-            data
+            data = data ?? new { }
         };
+
+        var payload = new[] { message };
 
         try
         {
+            _logger.LogInformation(
+                "Sending Expo push notification. Token: {Token}, Title: {Title}, Body: {Body}",
+                expoPushToken,
+                title,
+                body
+            );
+
             var response = await _httpClient.PostAsJsonAsync(ExpoPushApiUrl, payload);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            _logger.LogInformation(
+                "Expo push response. StatusCode: {StatusCode}. Response: {Response}",
+                response.StatusCode,
+                responseContent
+            );
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-
                 _logger.LogWarning(
                     "Expo push notification request failed. StatusCode: {StatusCode}. Response: {Response}",
                     response.StatusCode,
-                    errorContent
+                    responseContent
                 );
             }
         }

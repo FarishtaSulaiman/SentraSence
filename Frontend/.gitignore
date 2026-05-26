@@ -43,3 +43,5 @@ app-example
 # generated native folders
 /ios
 /android
+
+sentrasense-fcm-key.json
