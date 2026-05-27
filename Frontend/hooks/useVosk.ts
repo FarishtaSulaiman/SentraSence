@@ -25,10 +25,11 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
   useEffect(() => {
     async function load() {
       try {
-        await Vosk.loadModel(modelPath);
+        const normalizedModelPath = modelPath.replace(/^\/?assets\//i, "");
+        Vosk.loadModel("model-sv-rhasspy-0.15");
         modelLoaded.current = true;
         setIsReady(true);
-        console.log("Vosk: Model loaded");
+        console.log("Vosk: Model loaded", { modelPath, normalizedModelPath });
       } catch (err) {
         console.error("Vosk: Failed to load model", err);
         optionsRef.current.onError?.(err);
@@ -52,9 +53,9 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
       optionsRef.current.onResult?.(res);
     });
 
-    const sub2 = Vosk.onPartialResult((res) => {
-      optionsRef.current.onPartialResult?.(res);
-    });
+    const sub2 = Vosk.onPartialResult(() => {
+  // Ignorera partials helt – RN-Vosk buggar annars
+});
 
     const sub3 = Vosk.onError((err) => {
       console.error("Vosk error:", err);

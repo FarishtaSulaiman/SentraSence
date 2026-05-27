@@ -44,3 +44,4 @@ app-example
 
 #models
 assets/model-sv-rhasspy-0.15/
+android/app/src/main/assets/models/
