@@ -20,9 +20,6 @@ import { API } from "@/config/api";
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
 
-// TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-// const API_BASE_URL = "http://192.168.50.203:5255";
-
 export default function Login() {
   const { setUser } = useAuth();
   const [rememberMe, setRememberMe] = useState(true);

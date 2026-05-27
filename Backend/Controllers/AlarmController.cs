@@ -13,12 +13,18 @@ public class AlarmController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
+    private readonly IPushNotificationService _pushNotifications;
     private readonly ILogger<AlarmController> _logger;
 
-    public AlarmController(AppDbContext db, IEmailService email, ILogger<AlarmController> logger)
+    public AlarmController(
+        AppDbContext db, 
+        IEmailService email, 
+        IPushNotificationService pushNotifications, 
+        ILogger<AlarmController> logger)
     {
         _db = db;
         _email = email;
+        _pushNotifications = pushNotifications;
         _logger = logger;
     }
 
@@ -137,7 +143,18 @@ public class AlarmController : ControllerBase
         );
         await Task.WhenAll(emailTasks);
 
-        return Ok(new { message = "Larmet bekräftat. E-post skickat. Hjälp är på väg.", alarmEventId = id, emailSentTo = contacts.Count });
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            alarm.UserId,
+            "Larm bekräftat",
+            "Dina nödkontakter har meddelats. Hjälp är på väg.",
+            new
+            {
+                alarmEventId = id,
+                type = "alarm_confirmed"
+            }
+        );
+
+        return Ok(new { message = "Larmet bekräftat. E-post och pushnotis skickat. Hjälp är på väg.", alarmEventId = id, emailSentTo = contacts.Count });
     }
 
     private async Task SendEmailWithErrorHandling(string toEmail, string toName, string userName, double lat, double lon)
