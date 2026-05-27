@@ -48,8 +48,7 @@ public class PushNotificationService : IPushNotificationService
         try
         {
             _logger.LogInformation(
-                "Sending Expo push notification. Token: {Token}, Title: {Title}, Body: {Body}",
-                expoPushToken,
+                "Sending Expo push notification. Title: {Title}, Body: {Body}",
                 title,
                 body
             );

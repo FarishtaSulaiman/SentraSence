@@ -61,22 +61,10 @@ export default function Login() {
       }
 
       const googleUser = googleResponse.data.user;
-
       console.log("Google user:", googleUser);
-
-      console.log("API used for backend login:", API);
 
       const backendLoginUrl = `${API}/api/auth/google`;
       console.log("Backend login URL:", backendLoginUrl);
-
-      try {
-        console.log("Testing backend root:", `${API}/`);
-
-        const testResponse = await fetch(`${API}/`);
-        console.log("Backend root test status:", testResponse.status);
-      } catch (testError) {
-        console.error("Backend root test failed:", testError);
-      }
 
       const backendResponse = await fetch(backendLoginUrl, {
         method: "POST",
