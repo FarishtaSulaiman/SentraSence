@@ -53,8 +53,14 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
       optionsRef.current.onResult?.(res);
     });
 
-    const sub2 = Vosk.onPartialResult(() => {
-  // Ignorera partials helt – RN-Vosk buggar annars
+        let last = 0;
+
+const sub2 = Vosk.onPartialResult((res) => {
+  const now = Date.now();
+  if (now - last < 150) return; // throttla event-storm
+  last = now;
+
+  optionsRef.current.onPartialResult?.(res);
 });
 
     const sub3 = Vosk.onError((err) => {
