@@ -7,6 +7,9 @@
     "icon": "./assets/images/SentraShield.png",
     "scheme": "sentrasense",
     "userInterfaceStyle": "automatic",
+
+    "assetBundlePatterns": ["assets/**/*"],
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sentrasense.app"
@@ -24,6 +27,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-vosk",
+        {
+          "models": ["assets/model-sv-rhasspy-0.15"]
+        }
+      ],
       [
         "expo-splash-screen",
         {

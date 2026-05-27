@@ -8,7 +8,7 @@ export default function VoskTestScreen() {
       try {
         console.log("Vosk object:", Vosk);
 
-        await Vosk.loadModel("model-sv-se");
+        await Vosk.loadModel("model-sv-rhasspy-0.15");
         console.log("Modellen laddades!");
 
         await Vosk.start({
