@@ -31,6 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.local
 .env*.local
 
 # typescript
@@ -41,6 +43,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Firebase service account key for Expo/FCM push notifications
+sentrasense-fcm-key.json
 
 #models
 assets/model-sv-rhasspy-0.15/

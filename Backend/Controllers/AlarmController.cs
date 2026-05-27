@@ -13,12 +13,18 @@ public class AlarmController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
+    private readonly IPushNotificationService _pushNotifications;
     private readonly ILogger<AlarmController> _logger;
 
-    public AlarmController(AppDbContext db, IEmailService email, ILogger<AlarmController> logger)
+    public AlarmController(
+        AppDbContext db, 
+        IEmailService email, 
+        IPushNotificationService pushNotifications, 
+        ILogger<AlarmController> logger)
     {
         _db = db;
         _email = email;
+        _pushNotifications = pushNotifications;
         _logger = logger;
     }
 
@@ -52,6 +58,17 @@ public class AlarmController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            request.UserId,
+            "Larm aktiverat",
+            "Vi har startat ett nödlarm. Bekräfta eller avbryt.",
+            new
+            {
+                alarmEventId = alarmEvent.AlarmEventId,
+                type = "alarm_triggered"
+            }
+        );
 
         var contactCount = await _db.TrustedContacts
             .CountAsync(c => c.UserId == request.UserId);
@@ -100,6 +117,17 @@ public class AlarmController : ControllerBase
         alarm.EndedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            alarm.UserId,
+            "Larm avbrutet",
+            "Larmet har avbrutits.",
+            new
+            {
+                alarmEventId = id,
+                type = "alarm_cancelled"
+            }
+        );
+
         return Ok(new { message = "Larmet avbröts.", alarmEventId = id });
     }
 
@@ -137,7 +165,23 @@ public class AlarmController : ControllerBase
         );
         await Task.WhenAll(emailTasks);
 
-        return Ok(new { message = "Larmet bekräftat. E-post skickat. Hjälp är på väg.", alarmEventId = id, emailSentTo = contacts.Count });
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            alarm.UserId,
+            "Kontakt meddelad",
+            "Dina nödkontakter har fått email med din position.",
+            new
+            {
+                alarmEventId = id,
+                type = "contacts_notified"
+            }
+        );
+
+        return Ok(new
+        {
+            message = "Larmet bekräftat. E-post och pushnotis skickade. Hjälp är på väg.",
+            alarmEventId = id,
+            emailSentTo = contacts.Count
+        });
     }
 
     private async Task SendEmailWithErrorHandling(string toEmail, string toName, string userName, double lat, double lon)

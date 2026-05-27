@@ -18,7 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<TrustedContact> TrustedContacts => Set<TrustedContact>();
     public DbSet<AiAnalysis> AiAnalyses => Set<AiAnalysis>();
     public DbSet<UserConsent> UserConsents => Set<UserConsent>();
-
+    public DbSet<PushNotificationToken> PushNotificationTokens => Set<PushNotificationToken>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -30,5 +30,23 @@ public class AppDbContext : DbContext
     .WithMany()
     .HasForeignKey(n => n.TrustedContactId)
     .OnDelete(DeleteBehavior.Restrict);
+
+    modelBuilder.Entity<PushNotificationToken>()
+    .HasOne(p => p.User)
+    .WithMany(u => u.PushNotificationTokens)
+    .HasForeignKey(p => p.UserId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+    modelBuilder.Entity<PushNotificationToken>()
+        .HasIndex(p => p.Token)
+        .IsUnique();
+
+    modelBuilder.Entity<PushNotificationToken>()
+        .Property(p => p.Token)
+        .HasMaxLength(512);
+
+    modelBuilder.Entity<PushNotificationToken>()
+        .Property(p => p.Platform)
+        .HasMaxLength(50);
     }
 }

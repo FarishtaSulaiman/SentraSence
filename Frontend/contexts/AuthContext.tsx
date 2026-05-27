@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
+import {
+  registerForPushNotificationsAsync,
+  sendPushTokenToBackend,
+} from "@/services/notificationService";
 
 export type AppUser = {
   userId: string;
@@ -45,6 +49,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
   };
+
+
+  useEffect(() => {
+    async function registerPushTokenForLoggedInUser() {
+      if (!user?.userId) {
+        return;
+      }
+
+      const pushToken = await registerForPushNotificationsAsync();
+
+      if (!pushToken) {
+        return;
+      }
+
+      await sendPushTokenToBackend({
+        userId: user.userId,
+        token: pushToken,
+      });
+    }
+
+    registerPushTokenForLoggedInUser();
+  }, [user?.userId]);
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>

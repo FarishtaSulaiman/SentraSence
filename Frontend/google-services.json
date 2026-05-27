@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "456209836940",
+    "project_id": "sentrasense-1f128",
+    "storage_bucket": "sentrasense-1f128.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:456209836940:android:b3f48561441f91c8f0c4a9",
+        "android_client_info": {
+          "package_name": "com.sentrasense.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgw0FGJU0fI-Wa7D5zfxD8fAxpaY-xYF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
