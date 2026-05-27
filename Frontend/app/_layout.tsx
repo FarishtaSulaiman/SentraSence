@@ -10,9 +10,15 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VoskProvider } from "@/services/VoskProvider";
+import { useEffect } from "react";
+import { codewordManager } from "@/services/codewordManager";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+  codewordManager.setTriggerEnabled(true);
+}, []);
 
   return (
     <AuthProvider>

@@ -122,6 +122,7 @@ export default function Register() {
         userId: appUser.userId,
         email: appUser.email,
         name: appUser.name,
+        codeword: appUser.codeword,
         codewordTrained: appUser.codewordTrained ?? false,
       });
 

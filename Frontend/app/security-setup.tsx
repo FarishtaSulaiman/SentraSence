@@ -15,9 +15,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, type AppUser } from "@/contexts/AuthContext";
 import { useVoskService } from "@/hooks/useVoskService";
 import { API } from "@/config/api";
+import { codewordManager } from "@/services/codewordManager";
+
 
 const CONSENT_VERSION = "1.0";
 
@@ -111,7 +113,7 @@ function InfoCard({
   );
 }
 
-// ─── STEP 1: Samtycken (GDPR-fullständig) ─────────────────────────────────────
+//#region ─── STEP 1: Samtycken (GDPR-fullständig) ─────────────────────────────────────
 
 function Step1({ onNext }: { onNext: () => void }) {
   const { user } = useAuth();
@@ -346,8 +348,8 @@ function Step1({ onNext }: { onNext: () => void }) {
     </ScrollView>
   );
 }
-
-// ─── STEP 2: Välj kodord ───────────────────────────────────────────────────────
+//#endregion
+//#region ─── STEP 2: Välj kodord ───────────────────────────────────────────────────────
 const PRESETS = [
   { icon: "moon" as const, label: "Röd måne" },
   { icon: "chatbubble" as const, label: "Hjälp mig" },
@@ -362,11 +364,11 @@ type Step2Props = {
   onBack: () => void;
   codeword: string;
   setCodeword: (value: string) => void;
+  user: AppUser | null;
+  setUser: (user: AppUser | null) => void;
 };
 
-export function Step2({ onNext, onBack, codeword, setCodeword }: Step2Props) {
-  const { user } = useAuth();
-
+export function Step2({ onNext, onBack, codeword, setCodeword, user, setUser }: Step2Props) {
   // Hämta reset från context
   const { lastResult, reset } = useVoskService();
 
@@ -394,7 +396,7 @@ export function Step2({ onNext, onBack, codeword, setCodeword }: Step2Props) {
     setIsTesting(true);
   };
 
-  // När Vosk ger ett nytt resultat under testläge → jämför
+  // När Vosk ger ett nytt resultat under testläge jämför
   useEffect(() => {
     if (!isTesting) return;
     if (!lastResult) return;
@@ -442,6 +444,13 @@ export function Step2({ onNext, onBack, codeword, setCodeword }: Step2Props) {
       });
 
       if (!res.ok) throw new Error();
+
+      if (user) {
+        const savedCodeword = codeword.trim();
+        setUser({ ...user, codeword: savedCodeword });
+        codewordManager.setCodeword(savedCodeword);
+      }
+
       onNext();
     } catch {
       Alert.alert("Fel", "Kunde inte spara kodordet. Försök igen.");
@@ -620,10 +629,8 @@ export function Step2({ onNext, onBack, codeword, setCodeword }: Step2Props) {
     </ScrollView>
   );
 }
-
-
-
-// ─── STEP 3: Träna kodord (MediaRecorder, fungerar på webb) ───────────────────
+//#endregion
+//#region ─── STEP 3: Träna kodord (MediaRecorder, fungerar på webb) ───────────────────
 
 type RecordingState = "idle" | "countdown" | "recording";
 
@@ -785,8 +792,8 @@ function Step3({ onNext, onBack, codeword }: { onNext: () => void; onBack: () =>
     </ScrollView>
   );
 }
-
-// ─── STEP 4: Nödkontakter ─────────────────────────────────────────────────────
+//#endregion
+//#region ─── STEP 4: Nödkontakter ─────────────────────────────────────────────────────
 
 type Contact = {
   trustedContactId?: string;
@@ -937,7 +944,7 @@ function Step4({ onFinish, onBack }: { onFinish: () => void; onBack: () => void 
       },
     ]);
   };
-
+//#endregion
   return (
     <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
@@ -1045,6 +1052,10 @@ export default function SecuritySetup() {
   const [step, setStep] = useState(1);
   const [codeword, setCodeword] = useState("");
 
+
+  useEffect(() => {
+    codewordManager.setTriggerEnabled(false);
+  }, []);
   // TODO: återaktivera inför release — kommenterat ut under byggtid
   // useEffect(() => {
   //   if (!user) router.replace("/login");
@@ -1063,7 +1074,16 @@ export default function SecuritySetup() {
   return (
     <SafeAreaView style={styles.safe}>
       {step === 1 && <Step1 onNext={next} />}
-      {step === 2 && <Step2 onNext={next} onBack={back} codeword={codeword} setCodeword={setCodeword} />}
+      {step === 2 && (
+        <Step2
+          onNext={next}
+          onBack={back}
+          codeword={codeword}
+          setCodeword={setCodeword}
+          user={user}
+          setUser={setUser}
+        />
+      )}
       {step === 3 && <Step3 onNext={next} onBack={back} codeword={codeword} />}
       {step === 4 && <Step4 onFinish={finish} onBack={back} />}
     </SafeAreaView>

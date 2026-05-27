@@ -7,4 +7,5 @@ public class AuthUserResponse
     public string? Name { get; set; }
     public bool CodewordTrained { get; set; }
     public bool SecuritySetupCompleted { get; set; }
+    public string? Codeword { get; set; }
 }

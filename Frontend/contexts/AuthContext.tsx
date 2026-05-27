@@ -4,11 +4,13 @@ import {
   registerForPushNotificationsAsync,
   sendPushTokenToBackend,
 } from "@/services/notificationService";
+import { codewordManager } from "@/services/codewordManager";
 
 export type AppUser = {
   userId: string;
   email: string;
   name?: string;
+  codeword?: string;
   codewordTrained?: boolean;
 };
 
@@ -50,6 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   };
 
+  useEffect(() => {
+    if (user?.codeword) {
+      codewordManager.setCodeword(user.codeword);
+    }
+  }, [user?.codeword]);
 
   useEffect(() => {
     async function registerPushTokenForLoggedInUser() {
