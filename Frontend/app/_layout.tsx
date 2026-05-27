@@ -9,12 +9,14 @@ import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { VoskProvider } from "@/services/VoskProvider";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <AuthProvider>
+      <VoskProvider>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack
           screenOptions={{
@@ -39,6 +41,7 @@ export default function RootLayout() {
 
         <StatusBar style="light" />
       </ThemeProvider>
+      </VoskProvider>
     </AuthProvider>
   );
 }

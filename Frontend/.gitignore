@@ -44,4 +44,9 @@ app-example
 /ios
 /android
 
+# Firebase service account key for Expo/FCM push notifications
 sentrasense-fcm-key.json
+
+#models
+assets/model-sv-rhasspy-0.15/
+android/app/src/main/assets/models/
