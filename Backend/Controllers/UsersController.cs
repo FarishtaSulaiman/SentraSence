@@ -81,4 +81,52 @@ public class UsersController : ControllerBase
 
         return Ok(consents);
     }
+
+    // GET /api/users/{userId}
+    [HttpGet("{userId:guid}")]
+    public async Task<IActionResult> GetUser(Guid userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound();
+
+        return Ok(new
+        {
+            user.UserId,
+            user.Email,
+            user.Name,
+            user.Phone,
+            user.CodewordTrained,
+            user.CreatedAt,
+        });
+    }
+
+    // PUT /api/users/{userId}/profile
+    [HttpPut("{userId:guid}/profile")]
+    public async Task<IActionResult> UpdateProfile(Guid userId, [FromBody] UpdateProfileRequest request)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound();
+
+        if (request.Name is not null)
+            user.Name = request.Name.Trim();
+
+        if (request.Phone is not null)
+            user.Phone = request.Phone.Trim();
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    // DELETE /api/users/{userId}
+    [HttpDelete("{userId:guid}")]
+    public async Task<IActionResult> DeleteAccount(Guid userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound();
+
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
 }
