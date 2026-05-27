@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { VoskContext } from "../contexts/VoskContext";
 import { useVosk } from "../hooks/useVosk";
+import { codewordManager } from "./codewordManager";
 
 type Props = {
   children: React.ReactNode;
 };
 
 export function VoskProvider({ children }: Props) {
-  // ­ƒöÑ Global transkribering
+  //Global transkribering
   const [lastResult, setLastResult] = useState("");
   const [lastPartial, setLastPartial] = useState("");
 
-  // ­ƒöÑ Reset-funktion som Step2 beh├Âver
+  // Reset-funktion som Step2 beh├Âver
   const reset = () => {
     setLastResult("");
     setLastPartial("");
@@ -31,16 +32,19 @@ export function VoskProvider({ children }: Props) {
     onPartialResult: (text) => {
       console.log("Vosk PARTIAL:", text);
       setLastPartial(text);
+
+      codewordManager.onPartial(text);
     },
     onError: (err) => {
       console.log("Vosk ERROR:", err);
     },
   });
 
-  // Starta Vosk automatiskt n├ñr modellen ├ñr redo
+  // Starta Vosk automatiskt när modellen är redo
   useEffect(() => {
     if (isReady && !isListening) {
       start();
+      codewordManager.setActive(true);
     }
   }, [isReady, isListening, start]);
 

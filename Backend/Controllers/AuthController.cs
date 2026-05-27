@@ -45,12 +45,13 @@ public class AuthController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
-
+        
         return Ok(new AuthUserResponse
         {
             UserId = user.UserId,
             Email = user.Email,
             Name = user.Name,
+            Codeword = user.Codeword,
             CodewordTrained = user.CodewordTrained,
             SecuritySetupCompleted = user.Consents.Any(c => c.ConsentType == "terms_of_service" && c.Granted)
         });
@@ -96,6 +97,7 @@ public async Task<ActionResult<AuthUserResponse>> GoogleRegister(
         UserId = user.UserId,
         Email = user.Email,
         Name = user.Name,
+        Codeword = user.Codeword,
         CodewordTrained = user.CodewordTrained,
         SecuritySetupCompleted = false // Ny användare har inte slutfört setup ännu
     });
