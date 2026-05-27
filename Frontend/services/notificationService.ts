@@ -92,7 +92,7 @@ export async function sendPushTokenToBackend({
 }): Promise<boolean> {
   try {
     const response = await fetch(
-      `${API}/api/notifications/register-token`, 
+      `${API}/api/notifications/register-token`,
       {
         method: "POST",
         headers: {

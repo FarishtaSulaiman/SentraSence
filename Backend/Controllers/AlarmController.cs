@@ -59,6 +59,17 @@ public class AlarmController : ControllerBase
 
         await _db.SaveChangesAsync();
 
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            request.UserId,
+            "Larm aktiverat",
+            "Vi har startat ett nödlarm. Bekräfta eller avbryt.",
+            new
+            {
+                alarmEventId = alarmEvent.AlarmEventId,
+                type = "alarm_triggered"
+            }
+        );
+
         var contactCount = await _db.TrustedContacts
             .CountAsync(c => c.UserId == request.UserId);
 
@@ -106,6 +117,17 @@ public class AlarmController : ControllerBase
         alarm.EndedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
+        await _pushNotifications.SendPushNotificationsToUserAsync(
+            alarm.UserId,
+            "Larm avbrutet",
+            "Larmet har avbrutits.",
+            new
+            {
+                alarmEventId = id,
+                type = "alarm_cancelled"
+            }
+        );
+
         return Ok(new { message = "Larmet avbröts.", alarmEventId = id });
     }
 
@@ -145,16 +167,21 @@ public class AlarmController : ControllerBase
 
         await _pushNotifications.SendPushNotificationsToUserAsync(
             alarm.UserId,
-            "Larm bekräftat",
-            "Dina nödkontakter har meddelats. Hjälp är på väg.",
+            "Kontakt meddelad",
+            "Dina nödkontakter har fått email med din position.",
             new
             {
                 alarmEventId = id,
-                type = "alarm_confirmed"
+                type = "contacts_notified"
             }
         );
 
-        return Ok(new { message = "Larmet bekräftat. E-post och pushnotis skickat. Hjälp är på väg.", alarmEventId = id, emailSentTo = contacts.Count });
+        return Ok(new
+        {
+            message = "Larmet bekräftat. E-post och pushnotis skickade. Hjälp är på väg.",
+            alarmEventId = id,
+            emailSentTo = contacts.Count
+        });
     }
 
     private async Task SendEmailWithErrorHandling(string toEmail, string toName, string userName, double lat, double lon)
