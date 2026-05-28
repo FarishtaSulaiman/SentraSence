@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import * as Vosk from "react-native-vosk";
 
 type VoskOptions = {
@@ -23,6 +24,7 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
 
   // Ladda modellen en gång
   useEffect(() => {
+    if (Platform.OS === "web") return;
     async function load() {
       try {
         const normalizedModelPath = modelPath.replace(/^\/?assets\//i, "");
@@ -48,6 +50,7 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
 
   // Event listeners
   useEffect(() => {
+    if (Platform.OS === "web") return;
     const sub1 = Vosk.onResult((res) => {
       console.log("Vosk result:", res);
       optionsRef.current.onResult?.(res);
@@ -83,7 +86,7 @@ const sub2 = Vosk.onPartialResult((res) => {
 
   // Start listening
 const start = useCallback(async () => {
-  if (!modelLoaded.current) return;
+  if (Platform.OS === "web" || !modelLoaded.current) return;
 
   try {
     await Vosk.start();
@@ -96,6 +99,7 @@ const start = useCallback(async () => {
 }, []);
 
 const stop = useCallback(async () => {
+  if (Platform.OS === "web") return;
   try {
     await Vosk.stop();
     setIsListening(false);
