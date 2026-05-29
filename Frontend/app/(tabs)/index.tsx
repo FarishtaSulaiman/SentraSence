@@ -13,11 +13,28 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
-
-const API = "http://localhost:5255";
+import { API } from "@/config/api";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 type Contact = { trustedContactId: string; name: string; phone: string; isPrimary: boolean };
+type AlarmEvent = { alarmEventId: string; triggerType: string; status: string; startedAt: string };
+
+const STATUS_COLORS: Record<string, string> = {
+  Active:    "#E63946",
+  Confirmed: "#F39C12",
+  Cancelled: "#2ECC71",
+};
+const TRIGGER_LABELS: Record<string, string> = {
+  Manual:   "Manuellt larm",
+  WakeWord: "Röstkommando",
+};
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  const time = d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  return isToday ? `Idag ${time}` : d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) + ` ${time}`;
+}
 
 function QuickAction({
   icon,
@@ -48,12 +65,17 @@ export default function Dashboard() {
   const { user } = useAuth();
   const showTrainingBanner = user && !user.codewordTrained;
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [recentEvents, setRecentEvents] = useState<AlarmEvent[]>([]);
 
   useEffect(() => {
     if (!user) return;
     fetch(`${API}/api/contacts/${user.userId}`)
       .then((r) => r.json())
       .then(setContacts)
+      .catch(() => {});
+    fetch(`${API}/api/alarm/history/${user.userId}`)
+      .then((r) => r.json())
+      .then((data: AlarmEvent[]) => setRecentEvents(data.slice(0, 3)))
       .catch(() => {});
   }, [user]);
 
@@ -222,17 +244,19 @@ export default function Dashboard() {
               <Text style={styles.infoCardTitle}>Senaste händelser</Text>
               <Ionicons name="clipboard" size={14} color="#00D8E6" />
             </View>
-            {[
-              { dot: "#2ECC71", text: "Systemet startades", time: "Idag 10:25" },
-              { dot: "#00D8E6", text: "Skydd aktiverat", time: "Idag 10:25" },
-              { dot: "#9B59B6", text: "Kodord tränat", time: "Idag 10:20" },
-            ].map((e) => (
-              <View key={e.text} style={styles.eventRow}>
-                <View style={[styles.eventDot, { backgroundColor: e.dot }]} />
-                <Text style={styles.eventText} numberOfLines={1}>{e.text}</Text>
-                <Text style={styles.eventTime}>{e.time}</Text>
-              </View>
-            ))}
+            {recentEvents.length === 0 ? (
+              <Text style={styles.infoCardDesc}>Inga larmhändelser än.</Text>
+            ) : (
+              recentEvents.map((e) => (
+                <View key={e.alarmEventId} style={styles.eventRow}>
+                  <View style={[styles.eventDot, { backgroundColor: STATUS_COLORS[e.status] ?? "#4A6070" }]} />
+                  <Text style={styles.eventText} numberOfLines={1}>
+                    {TRIGGER_LABELS[e.triggerType] ?? e.triggerType}
+                  </Text>
+                  <Text style={styles.eventTime}>{formatEventTime(e.startedAt)}</Text>
+                </View>
+              ))
+            )}
             <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/history" as any)}>
               <Text style={styles.cardLinkText}>Visa historik</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
