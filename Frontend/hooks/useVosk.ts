@@ -28,7 +28,12 @@ export function useVosk(modelPath: string, options: VoskOptions = {}) {
     async function load() {
       try {
         const normalizedModelPath = modelPath.replace(/^\/?assets\//i, "");
-        Vosk.loadModel("model-sv-rhasspy-0.15");
+
+        console.log("Vosk: Loading model", { modelPath, normalizedModelPath });
+
+        await Vosk.loadModel(normalizedModelPath);
+
+        // Vosk.loadModel("model-sv-rhasspy-0.15");
         modelLoaded.current = true;
         setIsReady(true);
         console.log("Vosk: Model loaded", { modelPath, normalizedModelPath });
