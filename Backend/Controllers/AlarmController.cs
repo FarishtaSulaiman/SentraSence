@@ -238,6 +238,27 @@ public class AlarmController : ControllerBase
         });
     }
 
+    // GET /api/alarm/history/{userId}
+    [HttpGet("history/{userId:guid}")]
+    public async Task<IActionResult> GetHistory(Guid userId)
+    {
+        var events = await _db.AlarmEvents
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.StartedAt)
+            .Select(a => new
+            {
+                alarmEventId = a.AlarmEventId,
+                triggerType = a.TriggerType,
+                status = a.Status,
+                startedAt = a.StartedAt,
+                endedAt = a.EndedAt,
+                notes = a.Notes,
+            })
+            .ToListAsync();
+
+        return Ok(events);
+    }
+
     private async Task SendEmailWithErrorHandling(string toEmail, string toName, string userName, double lat, double lon)
     {
         try
