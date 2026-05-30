@@ -57,6 +57,18 @@ public class AlarmController : ControllerBase
             CapturedAt = DateTime.UtcNow,
         });
 
+        _db.UserNotifications.Add(new UserNotification
+{
+            UserNotificationId = Guid.NewGuid(),
+            UserId = request.UserId,
+            AlarmEventId = alarmEvent.AlarmEventId,
+            Title = "Larm aktiverat",
+            Message = "Vi har startat ett nödlarm. Bekräfta eller avbryt.",
+            Type = "alarm_triggered",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _db.SaveChangesAsync();
 
         await _pushNotifications.SendPushNotificationsToUserAsync(
@@ -113,8 +125,36 @@ public class AlarmController : ControllerBase
         var alarm = await _db.AlarmEvents.FindAsync(id);
         if (alarm is null) return NotFound("Alarm not found.");
 
+        if (alarm.Status == "Cancelled")
+        {
+            return Ok(new { message = "Larmet är redan avbrutet.", alarmEventId = id });
+        }
+
+        if (alarm.Status == "Confirmed")
+        {
+            return BadRequest("Ett bekräftat larm kan inte avbrytas.");
+        }
+
+        if (alarm.Status != "Active")
+        {
+            return BadRequest("Endast aktiva larm kan avbrytas.");
+        }
+
         alarm.Status = "Cancelled";
         alarm.EndedAt = DateTime.UtcNow;
+
+        _db.UserNotifications.Add(new UserNotification
+{
+            UserNotificationId = Guid.NewGuid(),
+            UserId = alarm.UserId,
+            AlarmEventId = id,
+            Title = "Larm avbrutet",
+            Message = "Larmet har avbrutits.",
+            Type = "alarm_cancelled",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _db.SaveChangesAsync();
 
         await _pushNotifications.SendPushNotificationsToUserAsync(
@@ -164,6 +204,20 @@ public class AlarmController : ControllerBase
             SendEmailWithErrorHandling(contact.Email!, contact.Name, userName, lat, lon)
         );
         await Task.WhenAll(emailTasks);
+
+        _db.UserNotifications.Add(new UserNotification
+        {
+            UserNotificationId = Guid.NewGuid(),
+            UserId = alarm.UserId,
+            AlarmEventId = id,
+            Title = "Kontakt meddelad",
+            Message = "Dina nödkontakter har fått email med din position.",
+            Type = "contacts_notified",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _db.SaveChangesAsync();
 
         await _pushNotifications.SendPushNotificationsToUserAsync(
             alarm.UserId,
