@@ -14,8 +14,12 @@ import * as Location from "expo-location";
 import { Platform } from "react-native";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
+import { API } from "@/config/api";
+import { startRecording, stopRecording } from "@/services/audioService";
+import { uploadAudioToBlob } from "@/services/blobUploadService";
 
-const API_BASE = "http://localhost:5255";
+
+const API_BASE = API;
 
 function getPosition(): Promise<{ lat: number; lon: number; accuracy?: number }> {
   if (Platform.OS === "web") {
@@ -56,7 +60,7 @@ function StatusItem({
   statusText: string;
   statusColor: string;
   showSpinner?: boolean;
-}) {
+}){
   return (
     <View style={styles.statusItem}>
       <View style={[styles.statusItemIcon, { backgroundColor: iconColor + "22" }]}>
@@ -97,6 +101,7 @@ function Countdown({ seconds: initial, onExpire }: { seconds: number; onExpire: 
         return s > 0 ? s - 1 : 0;
       });
     }, 1000);
+
     return () => clearInterval(interval);
   }, [onExpire]);
 
@@ -128,9 +133,12 @@ export default function AlarmScreen() {
     "triggering" | "active" | "confirmed" | "cancelled"
   >("triggering");
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alarmEventIdRef = useRef<string | null>(null);
+  const hasTriggeredEmergencyRef = useRef(false);
+  
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.18,
@@ -143,8 +151,14 @@ export default function AlarmScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, []);
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [pulseAnim]);
 
   // Trigger alarm on mount
   useEffect(() => {
@@ -154,6 +168,7 @@ export default function AlarmScreen() {
       try {
         const { lat, lon } = await getPosition();
 
+        console.log("Triggering alarm at", API_BASE, "for user", user!.userId);
         const res = await fetch(`${API_BASE}/api/alarm/trigger`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -165,16 +180,35 @@ export default function AlarmScreen() {
           }),
         });
 
+        console.log("Alarm trigger response status:", res.status);
+
         if (res.ok) {
           const data = await res.json();
+          console.log("Alarm trigger response body:", data);
+          alarmEventIdRef.current = data.alarmEventId;
           setAlarmEventId(data.alarmEventId);
           setContactCount(data.contactsNotified);
           setAlarmStatus("active");
           startLocationTracking(data.alarmEventId);
+
+           //Skicka ljudfilens URL till backend
+  //       if (audioUrl) {
+  //         await fetch(`${API_BASE}/api/alarm/${data.alarmEventId}/audio`, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           userId: user!.userId,
+  //           audioUrl,
+  //         }),
+  //       });
+  // }
         } else {
+          const errorText = await res.text();
+          console.error("Alarm trigger failed", res.status, errorText);
           setAlarmStatus("active");
         }
-      } catch {
+      } catch (err) {
+        console.error("Error triggering alarm", err);
         setAlarmStatus("active");
       }
     }
@@ -185,6 +219,84 @@ export default function AlarmScreen() {
       if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     };
   }, [user]);
+
+  async function triggerEmergencyFlow() {
+    if (hasTriggeredEmergencyRef.current) return;
+
+    console.log("Emergency flow started. activeAlarmId:", alarmEventIdRef.current ?? alarmEventId);
+    setAlarmStatus("confirmed");
+
+    const activeAlarmId = alarmEventIdRef.current ?? alarmEventId;
+    if (!activeAlarmId) {
+      console.error("No active alarm ID available for emergency flow");
+      hasTriggeredEmergencyRef.current = false;
+      return;
+    }
+
+    hasTriggeredEmergencyRef.current = true;
+
+    try {
+      const confirmRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/confirm`, {
+        method: "POST",
+      });
+
+      console.log("Confirm response status:", confirmRes.status);
+
+      if (!confirmRes.ok) {
+        const errorText = await confirmRes.text();
+        console.error("Failed to confirm alarm", confirmRes.status, errorText);
+      }
+    } catch (err) {
+      console.error("Error confirming alarm", err);
+    }
+
+    try {
+      console.log("Starting recording…");
+      await startRecording();
+
+      recordingTimeoutRef.current = setTimeout(async () => {
+        try {
+          const uri = await stopRecording();
+          if (!uri) {
+            console.error("No audio URI returned");
+            return;
+          }
+
+          console.log("Recording stopped, audio URI:", uri);
+
+          const fileName = `alert_${Date.now()}.m4a`;
+          const blobUrl = await uploadAudioToBlob(uri, fileName);
+          console.log("Blob uploaded to:", blobUrl);
+
+          const attachRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/audio`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user?.userId,
+              audioUrl: blobUrl,
+            }),
+          });
+
+          console.log("Attach response status:", attachRes.status);
+
+          if (!attachRes.ok) {
+            const errorText = await attachRes.text();
+            console.error("Failed to attach audio", attachRes.status, errorText);
+            return;
+          }
+
+          console.log("Audio attached successfully");
+        } catch (err) {
+          console.error("Recording/upload flow error", err);
+        } finally {
+          recordingTimeoutRef.current = null;
+        }
+      }, 10000);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+      hasTriggeredEmergencyRef.current = false;
+    }
+  }
 
   function startLocationTracking(eventId: string) {
     locationIntervalRef.current = setInterval(async () => {
@@ -203,25 +315,16 @@ export default function AlarmScreen() {
 
   async function handleCancel() {
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
     if (alarmEventId) {
       try {
         await fetch(`${API_BASE}/api/alarm/${alarmEventId}/cancel`, { method: "POST" });
       } catch {}
     }
     router.replace("/(tabs)" as any);
-  }
-
-  async function handleConfirm() {
-    if (alarmEventId) {
-      try {
-        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/confirm`, {
-          method: "POST",
-        });
-      } catch {
-        // Show confirmed state anyway
-      }
-    }
-    setAlarmStatus("confirmed");
   }
 
   const isTriggering = alarmStatus === "triggering";
@@ -350,7 +453,7 @@ export default function AlarmScreen() {
         </View>
 
         {/* Countdown */}
-        <Countdown seconds={30} onExpire={handleConfirm} />
+        <Countdown seconds={30} onExpire={() => void triggerEmergencyFlow()} />
 
         {/* Action buttons */}
         <View style={styles.buttonRow}>
@@ -369,7 +472,9 @@ export default function AlarmScreen() {
 
           <Pressable
             style={[styles.helpBtn, isConfirmed && { backgroundColor: "#2ECC71" }]}
-            onPress={handleConfirm}
+            onPress={() => {
+              void triggerEmergencyFlow();
+            }}
             disabled={isConfirmed}
           >
             <Ionicons
