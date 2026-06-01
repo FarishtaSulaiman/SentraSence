@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import SentraTopBar from "@/components/SentraTopBar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
-import { fetchUnreadNotificationsCount } from "@/services/notificationService";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 type Contact = {
@@ -87,21 +87,7 @@ export default function Dashboard() {
   const showTrainingBanner = user && !user.codewordTrained;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [recentEvents, setRecentEvents] = useState<AlarmEvent[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const refreshUnreadCount = useCallback(async () => {
-    if (!user?.userId) {
-      setUnreadCount(0);
-      return;
-    }
-
-    try {
-      const count = await fetchUnreadNotificationsCount(user.userId);
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Failed to refresh unread notifications:", error);
-    }
-  }, [user?.userId]);
+  const { unreadCount } = useUnreadNotifications(user?.userId);
 
   useEffect(() => {
     if (!user) return;
@@ -114,12 +100,6 @@ export default function Dashboard() {
       .then((data: AlarmEvent[]) => setRecentEvents(data.slice(0, 3)))
       .catch(() => {});
   }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshUnreadCount();
-    }, [refreshUnreadCount]),
-  );
 
   const primaryContact =
     contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
@@ -159,19 +139,7 @@ export default function Dashboard() {
             </View>
             <Text style={styles.logoText}>SentraSense</Text>
           </View>
-          <Pressable
-            style={styles.bellBtn}
-            onPress={() => router.push("/(tabs)/notifications" as any)}
-          >
-            <Ionicons name="notifications-outline" size={22} color="#8FB8C4" />
-            {unreadCount > 0 ? (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
+          <NotificationBell unreadCount={unreadCount} />
         </View>
 
         {/* Greeting */}
@@ -429,29 +397,6 @@ const styles = StyleSheet.create({
   logoText: {
     color: "#00D8E6",
     fontSize: 16,
-    fontWeight: "800",
-  },
-  bellBtn: {
-    padding: 4,
-    position: "relative",
-  },
-  bellBadge: {
-    position: "absolute",
-    top: -4,
-    right: -8,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: "#E63946",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#08141D",
-  },
-  bellBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
     fontWeight: "800",
   },
 

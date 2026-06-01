@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,17 @@ import {
   ScrollView,
   Pressable,
   Animated,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import { Platform } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import SentraTopBar from "@/components/SentraTopBar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
-import { fetchUnreadNotificationsCount } from "@/services/notificationService";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 
 function getPosition(): Promise<{
   lat: number;
@@ -162,30 +162,18 @@ function Countdown({
 export default function AlarmScreen() {
   const { user } = useAuth();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { unreadCount, refreshUnreadCount } = useUnreadNotifications(
+    user?.userId,
+  );
 
   const [alarmEventId, setAlarmEventId] = useState<string | null>(null);
   const [contactCount, setContactCount] = useState(0);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [alarmStatus, setAlarmStatus] = useState<
     "triggering" | "active" | "confirmed" | "cancelled"
   >("triggering");
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
-
-  const refreshUnreadCount = useCallback(async () => {
-    if (!user?.userId) {
-      setUnreadCount(0);
-      return;
-    }
-
-    try {
-      const count = await fetchUnreadNotificationsCount(user.userId);
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Failed to refresh unread notifications:", error);
-    }
-  }, [user?.userId]);
 
   useEffect(() => {
     Animated.loop(
@@ -202,13 +190,7 @@ export default function AlarmScreen() {
         }),
       ]),
     ).start();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshUnreadCount();
-    }, [refreshUnreadCount]),
-  );
+  }, [pulseAnim]);
 
   // Trigger alarm on mount
   useEffect(() => {
@@ -250,7 +232,7 @@ export default function AlarmScreen() {
       if (locationIntervalRef.current)
         clearInterval(locationIntervalRef.current);
     };
-  }, [user]);
+  }, [user, refreshUnreadCount]);
 
   function startLocationTracking(eventId: string) {
     locationIntervalRef.current = setInterval(async () => {
@@ -312,19 +294,7 @@ export default function AlarmScreen() {
             </View>
             <Text style={styles.logoText}>SentraSense</Text>
           </View>
-          <Pressable
-            style={styles.bellBtn}
-            onPress={() => router.push("/(tabs)/notifications" as any)}
-          >
-            <Ionicons name="notifications-outline" size={22} color="#8FB8C4" />
-            {unreadCount > 0 ? (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
+          <NotificationBell unreadCount={unreadCount} />
         </View>
 
         {/* Alarm title */}
@@ -534,29 +504,6 @@ const styles = StyleSheet.create({
   logoText: {
     color: "#00D8E6",
     fontSize: 16,
-    fontWeight: "800",
-  },
-  bellBtn: {
-    padding: 4,
-    position: "relative",
-  },
-  bellBadge: {
-    position: "absolute",
-    top: -4,
-    right: -8,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: "#E63946",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#08141D",
-  },
-  bellBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
     fontWeight: "800",
   },
 
