@@ -6,37 +6,55 @@ import {
   ScrollView,
   Pressable,
   Animated,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import { Platform } from "react-native";
 import SentraTopBar from "@/components/SentraTopBar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { startRecording, stopRecording } from "@/services/audioService";
 import { uploadAudioToBlob } from "@/services/blobUploadService";
 
 
 const API_BASE = API;
 
-function getPosition(): Promise<{ lat: number; lon: number; accuracy?: number }> {
+function getPosition(): Promise<{
+  lat: number;
+  lon: number;
+  accuracy?: number;
+}> {
   if (Platform.OS === "web") {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve({ lat: 0, lon: 0 });
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined }),
-        (err) => { console.error("[GPS] geolocation error:", err.code, err.message); resolve({ lat: 0, lon: 0 }); },
-        { enableHighAccuracy: true, timeout: 10000 }
+        (pos) =>
+          resolve({
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: pos.coords.accuracy ?? undefined,
+          }),
+        (err) => {
+          console.error("[GPS] geolocation error:", err.code, err.message);
+          resolve({ lat: 0, lon: 0 });
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
       );
     });
   }
   return Location.requestForegroundPermissionsAsync().then(({ status }) => {
     if (status !== "granted") return { lat: 0, lon: 0 };
-    return Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).then(
-      (loc) => ({ lat: loc.coords.latitude, lon: loc.coords.longitude, accuracy: loc.coords.accuracy ?? undefined })
-    );
+    return Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    }).then((loc) => ({
+      lat: loc.coords.latitude,
+      lon: loc.coords.longitude,
+      accuracy: loc.coords.accuracy ?? undefined,
+    }));
   });
 }
 
@@ -63,7 +81,9 @@ function StatusItem({
 }){
   return (
     <View style={styles.statusItem}>
-      <View style={[styles.statusItemIcon, { backgroundColor: iconColor + "22" }]}>
+      <View
+        style={[styles.statusItemIcon, { backgroundColor: iconColor + "22" }]}
+      >
         <Ionicons name={icon} size={18} color={iconColor} />
       </View>
       <View style={styles.statusItemText}>
@@ -75,9 +95,19 @@ function StatusItem({
           {statusText}
         </Text>
         {showSpinner ? (
-          <Ionicons name="reload-circle" size={16} color={statusColor} style={{ marginLeft: 4 }} />
+          <Ionicons
+            name="reload-circle"
+            size={16}
+            color={statusColor}
+            style={{ marginLeft: 4 }}
+          />
         ) : (
-          <Ionicons name="checkmark-circle" size={16} color={statusColor} style={{ marginLeft: 4 }} />
+          <Ionicons
+            name="checkmark-circle"
+            size={16}
+            color={statusColor}
+            style={{ marginLeft: 4 }}
+          />
         )}
       </View>
     </View>
@@ -86,7 +116,13 @@ function StatusItem({
 
 // ─── Countdown timer ───────────────────────────────────────────────────────────
 
-function Countdown({ seconds: initial, onExpire }: { seconds: number; onExpire: () => void }) {
+function Countdown({
+  seconds: initial,
+  onExpire,
+}: {
+  seconds: number;
+  onExpire: () => void;
+}) {
   const [seconds, setSeconds] = useState(initial);
   const expiredRef = useRef(false);
 
@@ -105,17 +141,23 @@ function Countdown({ seconds: initial, onExpire }: { seconds: number; onExpire: 
     return () => clearInterval(interval);
   }, [onExpire]);
 
-  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const m = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
   const s = (seconds % 60).toString().padStart(2, "0");
 
   return (
     <View style={styles.timerCard}>
       <View style={styles.timerCircle}>
-        <Text style={styles.timerText}>{m}:{s}</Text>
+        <Text style={styles.timerText}>
+          {m}:{s}
+        </Text>
       </View>
       <View>
         <Text style={styles.timerLabel}>Larmet fortsätter i</Text>
-        <Text style={styles.timerSub}>Tryck på Avbryt larm om du är i säkerhet.</Text>
+        <Text style={styles.timerSub}>
+          Tryck på Avbryt larm om du är i säkerhet.
+        </Text>
       </View>
     </View>
   );
@@ -126,6 +168,9 @@ function Countdown({ seconds: initial, onExpire }: { seconds: number; onExpire: 
 export default function AlarmScreen() {
   const { user } = useAuth();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { unreadCount, refreshUnreadCount } = useUnreadNotifications(
+    user?.userId,
+  );
 
   const [alarmEventId, setAlarmEventId] = useState<string | null>(null);
   const [contactCount, setContactCount] = useState(0);
@@ -189,6 +234,7 @@ export default function AlarmScreen() {
           setAlarmEventId(data.alarmEventId);
           setContactCount(data.contactsNotified);
           setAlarmStatus("active");
+          await refreshUnreadCount();
           startLocationTracking(data.alarmEventId);
 
            //Skicka ljudfilens URL till backend
@@ -216,9 +262,10 @@ export default function AlarmScreen() {
     triggerAlarm();
 
     return () => {
-      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+      if (locationIntervalRef.current)
+        clearInterval(locationIntervalRef.current);
     };
-  }, [user]);
+  }, [user, refreshUnreadCount]);
 
   async function triggerEmergencyFlow() {
     if (hasTriggeredEmergencyRef.current) return;
@@ -302,7 +349,7 @@ export default function AlarmScreen() {
     locationIntervalRef.current = setInterval(async () => {
       try {
         const { lat, lon, accuracy } = await getPosition();
-        await fetch(`${API_BASE}/api/alarm/${eventId}/location`, {
+        await fetch(`${API}/api/alarm/${eventId}/location`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lat, lon, accuracy }),
@@ -321,10 +368,26 @@ export default function AlarmScreen() {
     }
     if (alarmEventId) {
       try {
-        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/cancel`, { method: "POST" });
+        await fetch(`${API}/api/alarm/${alarmEventId}/cancel`, {
+          method: "POST",
+        });
       } catch {}
     }
     router.replace("/(tabs)" as any);
+  }
+
+  async function handleConfirm() {
+    if (alarmEventId) {
+      try {
+        await fetch(`${API}/api/alarm/${alarmEventId}/confirm`, {
+          method: "POST",
+        });
+        await refreshUnreadCount();
+      } catch {
+        // Show confirmed state anyway
+      }
+    }
+    setAlarmStatus("confirmed");
   }
 
   const isTriggering = alarmStatus === "triggering";
@@ -346,9 +409,7 @@ export default function AlarmScreen() {
             </View>
             <Text style={styles.logoText}>SentraSense</Text>
           </View>
-          <Pressable style={styles.bellBtn}>
-            <Ionicons name="notifications-outline" size={22} color="#8FB8C4" />
-          </Pressable>
+          <NotificationBell unreadCount={unreadCount} />
         </View>
 
         {/* Alarm title */}
@@ -369,7 +430,12 @@ export default function AlarmScreen() {
           <Animated.View
             style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }] }]}
           >
-            <View style={[styles.pulseInner, isConfirmed && { backgroundColor: "#2ECC71" }]}>
+            <View
+              style={[
+                styles.pulseInner,
+                isConfirmed && { backgroundColor: "#2ECC71" },
+              ]}
+            >
               <Ionicons
                 name={isConfirmed ? "shield-checkmark" : "alert"}
                 size={42}
@@ -438,7 +504,9 @@ export default function AlarmScreen() {
                 ? "Kontaktar dina nödkontakter..."
                 : `${contactCount} nödkontakt${contactCount !== 1 ? "er" : ""} har notifierats.`
             }
-            statusText={isTriggering ? "..." : `${contactCount} av ${contactCount}`}
+            statusText={
+              isTriggering ? "..." : `${contactCount} av ${contactCount}`
+            }
             statusColor={isTriggering ? "#F39C12" : "#2ECC71"}
             showSpinner={isTriggering}
           />
@@ -446,9 +514,15 @@ export default function AlarmScreen() {
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={16} color="#00D8E6" style={{ marginRight: 8, marginTop: 1 }} />
+          <Ionicons
+            name="information-circle"
+            size={16}
+            color="#00D8E6"
+            style={{ marginRight: 8, marginTop: 1 }}
+          />
           <Text style={styles.infoText}>
-            Dina kontakter får din position och en länk för att följa din resa i realtid.
+            Dina kontakter får din position och en länk för att följa din resa i
+            realtid.
           </Text>
         </View>
 
@@ -465,8 +539,12 @@ export default function AlarmScreen() {
               style={{ marginRight: 6 }}
             />
             <View>
-              <Text style={styles.cancelTitle}>{isConfirmed ? "Gå till hem" : "Det är falsklarm"}</Text>
-              <Text style={styles.cancelSub}>{isConfirmed ? "Stäng larm" : "Avbryt och stoppa larm"}</Text>
+              <Text style={styles.cancelTitle}>
+                {isConfirmed ? "Gå till hem" : "Det är falsklarm"}
+              </Text>
+              <Text style={styles.cancelSub}>
+                {isConfirmed ? "Stäng larm" : "Avbryt och stoppa larm"}
+              </Text>
             </View>
           </Pressable>
 
@@ -488,7 +566,9 @@ export default function AlarmScreen() {
                 {isConfirmed ? "Hjälp kontaktad" : "Jag behöver hjälp"}
               </Text>
               <Text style={styles.helpSub}>
-                {isConfirmed ? "Kontakter är informerade" : "Behåll larmet aktivt"}
+                {isConfirmed
+                  ? "Kontakter är informerade"
+                  : "Behåll larmet aktivt"}
               </Text>
             </View>
           </Pressable>
@@ -540,7 +620,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
   },
-  bellBtn: { padding: 4 },
 
   // Alarm title
   alarmTitle: {

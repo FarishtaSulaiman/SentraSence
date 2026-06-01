@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<AlarmEvent> AlarmEvents => Set<AlarmEvent>();
     public DbSet<AlarmLocation> AlarmLocations => Set<AlarmLocation>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<TrustedContact> TrustedContacts => Set<TrustedContact>();
     public DbSet<AiAnalysis> AiAnalyses => Set<AiAnalysis>();
     public DbSet<UserConsent> UserConsents => Set<UserConsent>();
@@ -47,6 +48,30 @@ public class AppDbContext : DbContext
 
     modelBuilder.Entity<PushNotificationToken>()
         .Property(p => p.Platform)
+        .HasMaxLength(50);
+
+    modelBuilder.Entity<UserNotification>()
+        .HasOne(n => n.User)
+        .WithMany()
+        .HasForeignKey(n => n.UserId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    modelBuilder.Entity<UserNotification>()
+        .HasOne(n => n.AlarmEvent)
+        .WithMany()
+        .HasForeignKey(n => n.AlarmEventId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+    modelBuilder.Entity<UserNotification>()
+        .Property(n => n.Title)
+        .HasMaxLength(100);
+
+    modelBuilder.Entity<UserNotification>()
+        .Property(n => n.Message)
+        .HasMaxLength(500);
+
+    modelBuilder.Entity<UserNotification>()
+        .Property(n => n.Type)
         .HasMaxLength(50);
     }
 }

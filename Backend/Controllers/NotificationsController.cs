@@ -143,4 +143,78 @@ public class NotificationsController : ControllerBase
             message = "Test push notification requested."
         });
     }
+
+    // GET /api/notifications/user/{userId}
+    [HttpGet("user/{userId:guid}")]
+    public async Task<IActionResult> GetUserNotifications(Guid userId)
+    {
+        // TODO: When backend authorization is introduced,
+        // get UserId from authenticated claims instead of the route.
+        var userExists = await _db.Users
+            .AnyAsync(user => user.UserId == userId);
+
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
+
+        var notifications = await _db.UserNotifications
+            .Where(notification => notification.UserId == userId)
+            .OrderByDescending(notification => notification.CreatedAt)
+            .Select(notification => new
+            {
+                notification.UserNotificationId,
+                notification.UserId,
+                notification.AlarmEventId,
+                notification.Title,
+                notification.Message,
+                notification.Type,
+                notification.IsRead,
+                notification.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(notifications);
+    }
+
+    // POST /api/notifications/user/{userId}/mark-all-read
+    [HttpPost("user/{userId:guid}/mark-all-read")]
+    public async Task<IActionResult> MarkAllNotificationsAsRead(Guid userId)
+    {
+        // TODO: When backend authorization is introduced,
+        // get UserId from authenticated claims instead of the route.
+        var userExists = await _db.Users
+            .AnyAsync(user => user.UserId == userId);
+
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
+
+        var unreadNotifications = await _db.UserNotifications
+            .Where(notification => notification.UserId == userId && !notification.IsRead)
+            .ToListAsync();
+
+        if (unreadNotifications.Count == 0)
+        {
+            return Ok(new
+            {
+                message = "No unread notifications found.",
+                updatedCount = 0
+            });
+        }
+
+        foreach (var notification in unreadNotifications)
+        {
+            notification.IsRead = true;
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Notifications marked as read.",
+            updatedCount = unreadNotifications.Count
+        });
+    }
 }
