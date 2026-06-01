@@ -1,4 +1,6 @@
 import { router } from "expo-router";
+import { startRecording, stopRecording } from "./audioService";
+import { uploadAudioToBlob } from "./blobUploadService";
 
 type Listener = (text: string) => void;
 
@@ -68,22 +70,17 @@ class CodewordManager {
     return false;
   }
 
-  private triggerAlarm() {
-    if (!this.triggerEnabled) return;
+  private async triggerAlarm() {
+  if (!this.triggerEnabled) return;
 
-    const now = Date.now();
-    if (now - this.lastTrigger < this.cooldownMs) return;
-    this.lastTrigger = now;
+  const now = Date.now();
+  if (now - this.lastTrigger < this.cooldownMs) return;
+  this.lastTrigger = now;
 
-    router.push("/alarm");
-  }
+  console.log("ALARM TRIGGERED — navigating to alarm screen");
 
-  addListener(fn: Listener) {
-    this.listeners.push(fn);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== fn);
-    };
-  }
+  router.push("/alarm");
+ }
 }
 
 export const codewordManager = new CodewordManager();

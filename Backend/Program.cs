@@ -52,6 +52,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     ));
 
 // Register your services
+builder.Services.AddScoped<AudioService>();
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService>();
