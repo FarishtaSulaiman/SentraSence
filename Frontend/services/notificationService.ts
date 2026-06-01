@@ -4,6 +4,17 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { API } from "@/config/api";
 
+export type UserNotification = {
+  userNotificationId: string;
+  userId: string;
+  alarmEventId?: string | null;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
 /**
  * Bestämmer hur notiser ska visas när appen är öppen.
  */
@@ -91,20 +102,17 @@ export async function sendPushTokenToBackend({
   token: string;
 }): Promise<boolean> {
   try {
-    const response = await fetch(
-      `${API}/api/notifications/register-token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          token,
-          platform: Platform.OS,
-        }),
+    const response = await fetch(`${API}/api/notifications/register-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        userId,
+        token,
+        platform: Platform.OS,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -121,4 +129,47 @@ export async function sendPushTokenToBackend({
     console.error("Error while sending push token to backend:", error);
     return false;
   }
+}
+
+export async function fetchUserNotifications(
+  userId: string,
+): Promise<UserNotification[]> {
+  const response = await fetch(`${API}/api/notifications/user/${userId}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to fetch notifications: ${response.status} ${errorText}`,
+    );
+  }
+
+  return (await response.json()) as UserNotification[];
+}
+
+export async function fetchUnreadNotificationsCount(
+  userId: string,
+): Promise<number> {
+  const notifications = await fetchUserNotifications(userId);
+  return notifications.filter((notification) => !notification.isRead).length;
+}
+
+export async function markAllNotificationsAsRead(
+  userId: string,
+): Promise<number> {
+  const response = await fetch(
+    `${API}/api/notifications/user/${userId}/mark-all-read`,
+    {
+      method: "POST",
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to mark notifications as read: ${response.status} ${errorText}`,
+    );
+  }
+
+  const data = (await response.json()) as { updatedCount?: number };
+  return data.updatedCount ?? 0;
 }
