@@ -281,21 +281,9 @@ export default function AlarmScreen() {
     }
 
     hasTriggeredEmergencyRef.current = true;
-
-    try {
-      const confirmRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/confirm`, {
-        method: "POST",
-      });
-
-      console.log("Confirm response status:", confirmRes.status);
-
-      if (!confirmRes.ok) {
-        const errorText = await confirmRes.text();
-        console.error("Failed to confirm alarm", confirmRes.status, errorText);
-      }
-    } catch (err) {
-      console.error("Error confirming alarm", err);
-    }
+    console.log("Emergency flow started. activeAlarmId:", activeAlarmId);
+    
+    await handleConfirm(activeAlarmId);
 
     try {
       console.log("Starting recording…");
@@ -376,19 +364,19 @@ export default function AlarmScreen() {
     router.replace("/(tabs)" as any);
   }
 
-  async function handleConfirm() {
-    if (alarmEventId) {
-      try {
-        await fetch(`${API}/api/alarm/${alarmEventId}/confirm`, {
-          method: "POST",
-        });
-        await refreshUnreadCount();
-      } catch {
-        // Show confirmed state anyway
-      }
-    }
-    setAlarmStatus("confirmed");
+async function handleConfirm(activeAlarmId: string) {
+  try {
+    await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/confirm`, {
+      method: "POST",
+    });
+
+    await refreshUnreadCount();
+  } catch (err) {
+    console.error("Error confirming alarm", err);
   }
+
+  setAlarmStatus("confirmed");
+}
 
   const isTriggering = alarmStatus === "triggering";
   const isConfirmed = alarmStatus === "confirmed";
