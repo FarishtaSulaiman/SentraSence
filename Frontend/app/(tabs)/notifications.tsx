@@ -1,28 +1,55 @@
 import React, { useCallback, useState } from "react";
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  ActivityIndicator, 
-  RefreshControl, 
-  Alert, 
-  Pressable 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
+import {
+  fetchUserNotifications,
+  markAllNotificationsAsRead,
+  UserNotification,
+} from "@/services/notificationService";
+import SentraTopBar from "@/components/SentraTopBar";
 
-type UserNotification = {
-  userNotificationId: string;
-  userId: string;
-  alarmEventId?: string | null;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
+const VISIBLE_NOTIFICATION_TYPES = new Set([
+  "alarm_triggered",
+  "contacts_notified",
+  "alarm_cancelled",
+]);
+
+const NOTIFICATION_META: Record<
+  string,
+  {
+    color: string;
+    label: string;
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+  }
+> = {
+  alarm_triggered: {
+    color: "#E63946",
+    label: "Larm aktiverat",
+    icon: "warning",
+  },
+  contacts_notified: {
+    color: "#F39C12",
+    label: "Kontakter meddelade",
+    icon: "people",
+  },
+  alarm_cancelled: {
+    color: "#2ECC71",
+    label: "Larm avbrutet",
+    icon: "close-circle",
+  },
 };
 
 export default function Notifications() {
@@ -31,15 +58,11 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = async () => {
-    console.log("Notifications screen user:", user);
-    console.log("Notifications API:", API);
-    console.log(
-      "Fetching notifications from:",
-      user?.userId
-        ? `${API}/api/notifications/user/${user.userId}`
-        : "No userId",
-    );
+  const unreadCount = notifications.filter(
+    (notification) => !notification.isRead,
+  ).length;
+
+  const fetchNotifications = useCallback(async () => {
     if (!user?.userId) {
       setNotifications([]);
       setLoading(false);
@@ -48,42 +71,49 @@ export default function Notifications() {
     }
 
     try {
-      const response = await fetch(
-        `${API}/api/notifications/user/${user.userId}`,
+      const data = await fetchUserNotifications(user.userId);
+      setNotifications(
+        data.filter((notification) =>
+          VISIBLE_NOTIFICATION_TYPES.has(notification.type),
+        ),
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          "Failed to fetch notifications:",
-          response.status,
-          errorText,
-        );
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Fetched notifications:", data);
-      
-      setNotifications(data);
     } catch (error) {
       console.error("Error while fetching notifications:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.userId]);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
       fetchNotifications();
-    }, [user?.userId]),
+    }, [fetchNotifications]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchNotifications();
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!user?.userId || unreadCount === 0) {
+      return;
+    }
+
+    try {
+      await markAllNotificationsAsRead(user.userId);
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({
+          ...notification,
+          isRead: true,
+        })),
+      );
+    } catch (error) {
+      console.error("Error while marking notifications as read:", error);
+      Alert.alert("Fel", "Kunde inte markera notiser som lästa.");
+    }
   };
 
   const cancelAlarm = async (alarmEventId?: string | null) => {
@@ -125,47 +155,91 @@ export default function Notifications() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <SentraTopBar />
       <ScrollView
-        contentContainerStyle={styles.container}
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#00D8E6"
+            colors={["#00D8E6"]}
+          />
         }
       >
-        <Text style={styles.title}>Notiser</Text>
-        <Text style={styles.sub}>Dina senaste notifikationer visas här.</Text>
+        <Text style={styles.pageTitle}>Notiser</Text>
+        <Text style={styles.pageSub}>Dina senaste larmnotiser</Text>
+
+        {unreadCount > 0 ? (
+          <Pressable style={styles.markReadBtn} onPress={handleMarkAllAsRead}>
+            <Ionicons name="checkmark-done" size={16} color="#00D8E6" />
+            <Text style={styles.markReadText}>Markera alla som lästa</Text>
+          </Pressable>
+        ) : null}
 
         {loading ? (
-          <ActivityIndicator style={styles.loader} />
+          <ActivityIndicator color="#00D8E6" style={styles.loader} />
         ) : notifications.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Inga notiser än</Text>
-            <Text style={styles.emptyText}>
-              När ett larm aktiveras eller uppdateras visas det här.
+          <View style={styles.emptyWrap}>
+            <Ionicons
+              name="notifications-off-outline"
+              size={36}
+              color="#4A6070"
+            />
+            <Text style={styles.emptyText}>Inga notiser än.</Text>
+            <Text style={styles.emptySubText}>
+              Larm aktiverat, kontakter meddelade och larm avbrutet visas här.
             </Text>
           </View>
         ) : (
-          <View style={styles.list}>
-            {notifications.map((notification) => {
-              const canCancel = notification.type === "alarm_triggered";
+          notifications.map((notification) => {
+            const canCancel = notification.type === "alarm_triggered";
+            const meta =
+              NOTIFICATION_META[notification.type] ??
+              NOTIFICATION_META.alarm_triggered;
 
-              return (
-                <Pressable
-                  key={notification.userNotificationId}
-                  disabled={!canCancel}
-                  onPress={() => cancelAlarm(notification.alarmEventId)}
-                  style={[
-                    styles.card,
-                    !notification.isRead && styles.unreadCard,
-                    canCancel && styles.clickableCard,
-                  ]}
-                >
-                  <View style={styles.cardHeader}>
+            return (
+              <Pressable
+                key={notification.userNotificationId}
+                disabled={!canCancel}
+                onPress={() => cancelAlarm(notification.alarmEventId)}
+                style={[
+                  styles.card,
+                  !notification.isRead && styles.unreadCard,
+                  canCancel && styles.clickableCard,
+                ]}
+              >
+                <View style={styles.cardLeft}>
+                  <View
+                    style={[
+                      styles.iconWrap,
+                      { backgroundColor: meta.color + "22" },
+                    ]}
+                  >
+                    <Ionicons name={meta.icon} size={20} color={meta.color} />
+                  </View>
+                </View>
+
+                <View style={styles.cardBody}>
+                  <View style={styles.cardTop}>
                     <Text style={styles.cardTitle}>{notification.title}</Text>
-                    <Text style={styles.time}>
-                      {formatDate(notification.createdAt)}
-                    </Text>
+                    <View
+                      style={[
+                        styles.badge,
+                        { backgroundColor: meta.color + "22" },
+                      ]}
+                    >
+                      <Text style={[styles.badgeText, { color: meta.color }]}>
+                        {meta.label}
+                      </Text>
+                    </View>
                   </View>
 
+                  <Text style={styles.timeText}>
+                    {formatDate(notification.createdAt)}
+                  </Text>
                   <Text style={styles.message}>{notification.message}</Text>
 
                   {canCancel ? (
@@ -173,10 +247,10 @@ export default function Notifications() {
                       Tryck för att avbryta larmet
                     </Text>
                   ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
+                </View>
+              </Pressable>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -195,83 +269,101 @@ function formatDate(dateString: string) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#08141D",
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 28,
-  },
-  title: {
+  safe: { flex: 1, backgroundColor: "#08141D" },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+  pageTitle: {
     color: "#FFFFFF",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  sub: {
-    color: "#8FA6B5",
-    fontSize: 13,
-    marginBottom: 22,
-  },
-  loader: {
-    marginTop: 32,
-  },
-  list: {
-    gap: 12,
-  },
-  card: {
-    backgroundColor: "#102533",
-    borderRadius: 18,
-    padding: 16,
+  pageSub: { color: "#4A6070", fontSize: 13, marginBottom: 24 },
+  markReadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    marginBottom: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#0D1F2D",
     borderWidth: 1,
-    borderColor: "#15394A",
+    borderColor: "#1A3040",
+  },
+  markReadText: {
+    color: "#00D8E6",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  loader: { marginTop: 40 },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#0D1F2D",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#1A3040",
+  },
+  cardLeft: { marginRight: 12, justifyContent: "flex-start" },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardBody: { flex: 1 },
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
   },
   unreadCard: {
     borderColor: "#00D8E6",
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 12,
-  },
   cardTitle: {
     color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     flex: 1,
+    marginRight: 8,
   },
-  time: {
-    color: "#00D8E6",
+  badge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
     fontSize: 11,
     fontWeight: "700",
   },
+  timeText: {
+    color: "#4A6070",
+    fontSize: 12,
+    marginTop: 2,
+    marginBottom: 4,
+  },
   message: {
-    color: "#B7C8D4",
-    fontSize: 13,
-    lineHeight: 18,
+    color: "#8FB8C4",
+    fontSize: 12,
+    marginTop: 4,
   },
-  emptyBox: {
-    backgroundColor: "#102533",
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#15394A",
-  },
-  emptyTitle: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
+  emptyWrap: { alignItems: "center", marginTop: 60, paddingHorizontal: 20 },
   emptyText: {
-    color: "#8FA6B5",
-    fontSize: 13,
-    lineHeight: 18,
+    color: "#4A6070",
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  emptySubText: {
+    color: "#2A4050",
+    fontSize: 12,
+    marginTop: 6,
+    textAlign: "center",
   },
   clickableCard: {
     borderColor: "#00D8E6",
@@ -279,7 +371,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: "#00D8E6",
     fontSize: 12,
-    fontWeight: "800",
-    marginTop: 10,
+    fontWeight: "700",
+    marginTop: 8,
   },
 });

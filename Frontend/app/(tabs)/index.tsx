@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,29 +11,50 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
+import { fetchUnreadNotificationsCount } from "@/services/notificationService";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
-type Contact = { trustedContactId: string; name: string; phone: string; isPrimary: boolean };
-type AlarmEvent = { alarmEventId: string; triggerType: string; status: string; startedAt: string };
+type Contact = {
+  trustedContactId: string;
+  name: string;
+  phone: string;
+  isPrimary: boolean;
+};
+type AlarmEvent = {
+  alarmEventId: string;
+  triggerType: string;
+  status: string;
+  startedAt: string;
+};
 
 const STATUS_COLORS: Record<string, string> = {
-  Active:    "#E63946",
+  Active: "#E63946",
   Confirmed: "#F39C12",
   Cancelled: "#2ECC71",
 };
 const TRIGGER_LABELS: Record<string, string> = {
-  Manual:   "Manuellt larm",
+  Manual: "Manuellt larm",
   WakeWord: "Röstkommando",
 };
 function formatEventTime(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const isToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  const time = d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-  return isToday ? `Idag ${time}` : d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) + ` ${time}`;
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  const time = d.toLocaleTimeString("sv-SE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return isToday
+    ? `Idag ${time}`
+    : d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) +
+        ` ${time}`;
 }
 
 function QuickAction({
@@ -60,12 +81,27 @@ function QuickAction({
   );
 }
 
-// Dashboard 
+// Dashboard
 export default function Dashboard() {
   const { user } = useAuth();
   const showTrainingBanner = user && !user.codewordTrained;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [recentEvents, setRecentEvents] = useState<AlarmEvent[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!user?.userId) {
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      const count = await fetchUnreadNotificationsCount(user.userId);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Failed to refresh unread notifications:", error);
+    }
+  }, [user?.userId]);
 
   useEffect(() => {
     if (!user) return;
@@ -79,7 +115,14 @@ export default function Dashboard() {
       .catch(() => {});
   }, [user]);
 
-  const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
+  useFocusEffect(
+    useCallback(() => {
+      refreshUnreadCount();
+    }, [refreshUnreadCount]),
+  );
+
+  const primaryContact =
+    contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
 
   const handleCallContact = () => {
     if (!primaryContact) return;
@@ -93,7 +136,7 @@ export default function Dashboard() {
           const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
           window.open(url, "_blank");
         },
-        () => alert("Kunde inte hämta din position.")
+        () => alert("Kunde inte hämta din position."),
       );
     } else {
       Linking.openURL("https://maps.google.com/");
@@ -116,15 +159,26 @@ export default function Dashboard() {
             </View>
             <Text style={styles.logoText}>SentraSense</Text>
           </View>
-          <Pressable style={styles.bellBtn}>
+          <Pressable
+            style={styles.bellBtn}
+            onPress={() => router.push("/(tabs)/notifications" as any)}
+          >
             <Ionicons name="notifications-outline" size={22} color="#8FB8C4" />
+            {unreadCount > 0 ? (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         </View>
 
         {/* Greeting */}
         <Text style={styles.greeting}>Hej, {user?.name ?? "där"}!</Text>
         <Text style={styles.greetingSub}>
-          Du är <Text style={styles.highlight}>skyddad</Text> och allt fungerar som det ska.
+          Du är <Text style={styles.highlight}>skyddad</Text> och allt fungerar
+          som det ska.
         </Text>
 
         {/* Status card */}
@@ -154,8 +208,12 @@ export default function Dashboard() {
             <View style={styles.trainingBannerLeft}>
               <Ionicons name="mic-outline" size={20} color="#F39C12" />
               <View style={{ marginLeft: 10, flex: 1 }}>
-                <Text style={styles.trainingBannerTitle}>AI-kodordsträning saknas</Text>
-                <Text style={styles.trainingBannerSub}>Tryck här för att slutföra träningen</Text>
+                <Text style={styles.trainingBannerTitle}>
+                  AI-kodordsträning saknas
+                </Text>
+                <Text style={styles.trainingBannerSub}>
+                  Tryck här för att slutföra träningen
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#F39C12" />
@@ -171,16 +229,39 @@ export default function Dashboard() {
         </View>
 
         <View style={styles.quickGrid}>
-          <Pressable style={styles.quickAction} onPress={() => router.push("/alarm" as any)}>
-            <View style={[styles.quickActionIcon, { backgroundColor: "#E6394622" }]}>
+          <Pressable
+            style={styles.quickAction}
+            onPress={() => router.push("/alarm" as any)}
+          >
+            <View
+              style={[styles.quickActionIcon, { backgroundColor: "#E6394622" }]}
+            >
               <Ionicons name="warning" size={22} color="#E63946" />
             </View>
             <Text style={styles.quickActionLabel}>Aktivera larm</Text>
             <Text style={styles.quickActionSub}>Nödsituation</Text>
           </Pressable>
-          <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" onPress={handleShareLocation} />
-          <QuickAction icon="call" label="Ring kontakt" sublabel={primaryContact?.name ?? "Snabbval"} color="#00D8E6" onPress={handleCallContact} />
-          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" onPress={() => router.push("/security-setup" as any)} />
+          <QuickAction
+            icon="person-add"
+            label="Dela min plats"
+            sublabel="Live"
+            color="#9B59B6"
+            onPress={handleShareLocation}
+          />
+          <QuickAction
+            icon="call"
+            label="Ring kontakt"
+            sublabel={primaryContact?.name ?? "Snabbval"}
+            color="#00D8E6"
+            onPress={handleCallContact}
+          />
+          <QuickAction
+            icon="shield-checkmark"
+            label="Testa mitt skydd"
+            sublabel="Kontrollera"
+            color="#2ECC71"
+            onPress={() => router.push("/security-setup" as any)}
+          />
         </View>
 
         {/* Status cards row */}
@@ -209,12 +290,19 @@ export default function Dashboard() {
               <Ionicons name="people" size={14} color="#00D8E6" />
             </View>
             <Text style={styles.infoCardActive}>
-              {contacts.length > 0 ? `${contacts.length} kontakt${contacts.length !== 1 ? "er" : ""}` : "Inga kontakter"}
+              {contacts.length > 0
+                ? `${contacts.length} kontakt${contacts.length !== 1 ? "er" : ""}`
+                : "Inga kontakter"}
             </Text>
             <Text style={styles.infoCardDesc}>
-              {contacts.length > 0 ? "Dina kontakter är redo att larmas vid behov." : "Lägg till nöd­kontakter under Kontakter."}
+              {contacts.length > 0
+                ? "Dina kontakter är redo att larmas vid behov."
+                : "Lägg till nöd­kontakter under Kontakter."}
             </Text>
-            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/contacts" as any)}>
+            <Pressable
+              style={styles.cardLink}
+              onPress={() => router.push("/(tabs)/contacts" as any)}
+            >
               <Text style={styles.cardLinkText}>Visa kontakter</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -249,15 +337,25 @@ export default function Dashboard() {
             ) : (
               recentEvents.map((e) => (
                 <View key={e.alarmEventId} style={styles.eventRow}>
-                  <View style={[styles.eventDot, { backgroundColor: STATUS_COLORS[e.status] ?? "#4A6070" }]} />
+                  <View
+                    style={[
+                      styles.eventDot,
+                      { backgroundColor: STATUS_COLORS[e.status] ?? "#4A6070" },
+                    ]}
+                  />
                   <Text style={styles.eventText} numberOfLines={1}>
                     {TRIGGER_LABELS[e.triggerType] ?? e.triggerType}
                   </Text>
-                  <Text style={styles.eventTime}>{formatEventTime(e.startedAt)}</Text>
+                  <Text style={styles.eventTime}>
+                    {formatEventTime(e.startedAt)}
+                  </Text>
                 </View>
               ))
             )}
-            <Pressable style={styles.cardLink} onPress={() => router.push("/(tabs)/history" as any)}>
+            <Pressable
+              style={styles.cardLink}
+              onPress={() => router.push("/(tabs)/history" as any)}
+            >
               <Text style={styles.cardLinkText}>Visa historik</Text>
               <Ionicons name="chevron-forward" size={12} color="#00D8E6" />
             </Pressable>
@@ -273,10 +371,15 @@ export default function Dashboard() {
             <View>
               <Text style={styles.alarmTitle}>Nödlarm</Text>
               <Text style={styles.alarmDesc}>Tryck här om du är i fara.</Text>
-              <Text style={styles.alarmDesc}>Larm går direkt till dina kontakter.</Text>
+              <Text style={styles.alarmDesc}>
+                Larm går direkt till dina kontakter.
+              </Text>
             </View>
           </View>
-          <Pressable style={styles.alarmBtn} onPress={() => router.push("/alarm" as any)}>
+          <Pressable
+            style={styles.alarmBtn}
+            onPress={() => router.push("/alarm" as any)}
+          >
             <Text style={styles.alarmBtnText}>Aktivera larm</Text>
           </Pressable>
         </View>
@@ -330,6 +433,26 @@ const styles = StyleSheet.create({
   },
   bellBtn: {
     padding: 4,
+    position: "relative",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: "#E63946",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#08141D",
+  },
+  bellBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
   },
 
   // Greeting
@@ -617,4 +740,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
-
