@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,18 @@ import {
   Pressable,
   Linking,
   Platform,
+  Modal,
+  PermissionsAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
+import * as IntentLauncher from "expo-intent-launcher";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
+import { VoskContext } from "@/contexts/VoskContext";
 import { API } from "@/config/api";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
@@ -66,6 +72,19 @@ export default function Dashboard() {
   const showTrainingBanner = user && !user.codewordTrained;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [recentEvents, setRecentEvents] = useState<AlarmEvent[]>([]);
+  const [showCheckModal, setShowCheckModal] = useState(false);
+  const [locationOk, setLocationOk] = useState(false);
+  const [notifOk, setNotifOk] = useState(false);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const voskCtx = useContext(VoskContext);
+
+  async function runSystemCheck() {
+    const locStatus = await Location.getForegroundPermissionsAsync();
+    setLocationOk(locStatus.status === "granted");
+    const notifStatus = await Notifications.getPermissionsAsync();
+    setNotifOk(notifStatus.status === "granted");
+    setShowCheckModal(true);
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -83,26 +102,87 @@ export default function Dashboard() {
 
   const handleCallContact = () => {
     if (!primaryContact) return;
-    Linking.openURL(`tel:${primaryContact.phone}`);
+    setShowCallModal(true);
+  };
+
+  const confirmCall = async () => {
+    setShowCallModal(false);
+    if (!primaryContact) return;
+    const number = primaryContact.phone;
+    if (Platform.OS === "android") {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+        {
+          title: "Telefonbehörighet",
+          message: `SentraSense behöver tillstånd för att ringa ${primaryContact.name} direkt.`,
+          buttonPositive: "Tillåt",
+          buttonNegative: "Avbryt",
+        }
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        await IntentLauncher.startActivityAsync("android.intent.action.CALL", {
+          data: `tel:${number}`,
+        });
+        return;
+      }
+    }
+    // Fallback: öppna dialer (webb eller nekad behörighet)
+    Linking.openURL(`tel:${number}`);
   };
 
   const handleShareLocation = () => {
-    if (Platform.OS === "web") {
-      navigator.geolocation?.getCurrentPosition(
-        (pos) => {
-          const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-          window.open(url, "_blank");
-        },
-        () => alert("Kunde inte hämta din position.")
-      );
-    } else {
-      Linking.openURL("https://maps.google.com/");
-    }
+    router.push("/share-location" as any);
   };
+
+  const checkRows = [
+    { label: "AI-övervakning", ok: !!(voskCtx?.isReady && voskCtx?.isListening) },
+    { label: "Platsdelning", ok: locationOk },
+    { label: "Nödkontakter", ok: contacts.length > 0 },
+    { label: "Push-notiser", ok: notifOk },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <SentraTopBar />
+
+      <Modal visible={showCallModal} transparent animationType="fade" onRequestClose={() => setShowCallModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalBox}>
+            <View style={styles.callModalIcon}>
+              <Ionicons name="call" size={32} color="#00D8E6" />
+            </View>
+            <Text style={styles.modalTitle}>Ring nödkontakt</Text>
+            <Text style={styles.callModalSub}>Vill du ringa din primära nödkontakt?</Text>
+            <Text style={styles.callModalName}>{primaryContact?.name ?? "Okänd kontakt"}</Text>
+            <Text style={styles.callModalPhone}>{primaryContact?.phone}</Text>
+            <Pressable style={styles.modalBtn} onPress={confirmCall}>
+              <Ionicons name="call" size={16} color="#08141D" style={{ marginRight: 6 }} />
+              <Text style={styles.modalBtnText}>Ring</Text>
+            </Pressable>
+            <Pressable style={styles.callCancelBtn} onPress={() => setShowCallModal(false)}>
+              <Text style={styles.callCancelText}>Avbryt</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showCheckModal} transparent animationType="fade" onRequestClose={() => setShowCheckModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowCheckModal(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Systemkontroll</Text>
+            {checkRows.map((r) => (
+              <View key={r.label} style={styles.modalRow}>
+                <View style={[styles.modalDot, { backgroundColor: r.ok ? "#2ECC71" : "#E63946" }]} />
+                <Text style={styles.modalRowText}>{r.label}</Text>
+                <Text style={[styles.modalStatus, { color: r.ok ? "#2ECC71" : "#E63946" }]}>{r.ok ? "OK" : "Saknas"}</Text>
+              </View>
+            ))}
+            <Pressable style={styles.modalBtn} onPress={() => setShowCheckModal(false)}>
+              <Text style={styles.modalBtnText}>Stäng</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -128,7 +208,7 @@ export default function Dashboard() {
         </Text>
 
         {/* Status card */}
-        <Pressable style={styles.statusCard}>
+        <View style={styles.statusCard}>
           <View style={styles.statusIconWrap}>
             <Ionicons name="shield-checkmark" size={36} color="#00D8E6" />
           </View>
@@ -142,32 +222,11 @@ export default function Dashboard() {
               <Text style={styles.statusOk}>Allt fungerar normalt</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#4A6070" />
-        </Pressable>
-
-        {/* AI-träning saknas — banner */}
-        {showTrainingBanner && (
-          <Pressable
-            style={styles.trainingBanner}
-            onPress={() => router.push("/security-setup" as any)}
-          >
-            <View style={styles.trainingBannerLeft}>
-              <Ionicons name="mic-outline" size={20} color="#F39C12" />
-              <View style={{ marginLeft: 10, flex: 1 }}>
-                <Text style={styles.trainingBannerTitle}>AI-kodordsträning saknas</Text>
-                <Text style={styles.trainingBannerSub}>Tryck här för att slutföra träningen</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#F39C12" />
-          </Pressable>
-        )}
+        </View>
 
         {/* Quick actions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Snabbåtgärder</Text>
-          <Pressable>
-            <Text style={styles.seeAll}>Visa alla &gt;</Text>
-          </Pressable>
         </View>
 
         <View style={styles.quickGrid}>
@@ -180,7 +239,7 @@ export default function Dashboard() {
           </Pressable>
           <QuickAction icon="person-add" label="Dela min plats" sublabel="Live" color="#9B59B6" onPress={handleShareLocation} />
           <QuickAction icon="call" label="Ring kontakt" sublabel={primaryContact?.name ?? "Snabbval"} color="#00D8E6" onPress={handleCallContact} />
-          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" onPress={() => router.push("/security-setup" as any)} />
+          <QuickAction icon="shield-checkmark" label="Testa mitt skydd" sublabel="Kontrollera" color="#2ECC71" onPress={runSystemCheck} />
         </View>
 
         {/* Status cards row */}
@@ -615,6 +674,102 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     fontSize: 11,
     marginTop: 2,
+  },
+
+  // System check modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    width: "82%",
+    backgroundColor: "#0D1F2D",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#1A3347",
+    padding: 24,
+  },
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  modalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 10,
+  },
+  modalDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  modalRowText: {
+    flex: 1,
+    color: "#C8D8E4",
+    fontSize: 14,
+  },
+  modalStatus: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  modalBtn: {
+    marginTop: 18,
+    backgroundColor: "#00D8E6",
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  modalBtnText: {
+    color: "#08141D",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  callModalIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(0,216,230,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+  callModalSub: {
+    color: "#8FB8C4",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  callModalName: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  callModalPhone: {
+    color: "#00D8E6",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  callCancelBtn: {
+    marginTop: 10,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  callCancelText: {
+    color: "#4A6070",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 

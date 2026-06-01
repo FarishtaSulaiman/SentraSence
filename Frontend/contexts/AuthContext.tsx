@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   registerForPushNotificationsAsync,
   sendPushTokenToBackend,
@@ -16,30 +17,40 @@ export type AppUser = {
 
 type AuthContextType = {
   user: AppUser | null;
+  loading: boolean;
   setUser: (user: AppUser | null) => void;
 };
 
 const STORAGE_KEY = "sentrasense_user";
 
-function readPersistedUser(): AppUser | null {
-  try {
-    if (Platform.OS === "web") {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as AppUser) : null;
-    }
-  } catch {}
-  return null;
-}
-
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  loading: true,
   setUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUserState] = useState<AppUser | null>(readPersistedUser);
+  const [user, setUserState] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const setUser = (newUser: AppUser | null) => {
+  // Läs sparad session vid uppstart
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        let raw: string | null = null;
+        if (Platform.OS === "web") {
+          raw = localStorage.getItem(STORAGE_KEY);
+        } else {
+          raw = await AsyncStorage.getItem(STORAGE_KEY);
+        }
+        if (raw) setUserState(JSON.parse(raw) as AppUser);
+      } catch {}
+      setLoading(false);
+    }
+    loadUser();
+  }, []);
+
+  const setUser = async (newUser: AppUser | null) => {
     setUserState(newUser);
     try {
       if (Platform.OS === "web") {
@@ -47,6 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
         } else {
           localStorage.removeItem(STORAGE_KEY);
+        }
+      } else {
+        if (newUser) {
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+        } else {
+          await AsyncStorage.removeItem(STORAGE_KEY);
         }
       }
     } catch {}
@@ -60,27 +77,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function registerPushTokenForLoggedInUser() {
-      if (!user?.userId) {
-        return;
-      }
-
+      if (!user?.userId) return;
       const pushToken = await registerForPushNotificationsAsync();
-
-      if (!pushToken) {
-        return;
-      }
-
-      await sendPushTokenToBackend({
-        userId: user.userId,
-        token: pushToken,
-      });
+      if (!pushToken) return;
+      await sendPushTokenToBackend({ userId: user.userId, token: pushToken });
     }
-
     registerPushTokenForLoggedInUser();
   }, [user?.userId]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -89,3 +95,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+

@@ -238,6 +238,42 @@ public class AlarmController : ControllerBase
         });
     }
 
+    // POST /api/alarm/share-location
+    // Skickar ett platsdelningsmail till alla nödkontakter
+    [HttpPost("share-location")]
+    public async Task<IActionResult> ShareLocation([FromBody] ShareLocationRequest request)
+    {
+        var user = await _db.Users.FindAsync(request.UserId);
+        if (user is null) return NotFound("User not found.");
+
+        var contacts = await _db.TrustedContacts
+            .Where(c => c.UserId == request.UserId && c.Email != null)
+            .ToListAsync();
+
+        if (contacts.Count == 0)
+            return Ok(new { message = "Inga kontakter med e-postadress hittades.", emailSentTo = 0 });
+
+        var userName = user.Name ?? "Okänd användare";
+        var emailTasks = contacts.Select(contact =>
+            SendLocationEmailWithErrorHandling(contact.Email!, contact.Name, userName, request.Lat, request.Lon)
+        );
+        await Task.WhenAll(emailTasks);
+
+        return Ok(new { message = "Plats delad.", emailSentTo = contacts.Count });
+    }
+
+    private async Task SendLocationEmailWithErrorHandling(string toEmail, string toName, string userName, double lat, double lon)
+    {
+        try
+        {
+            await _email.SendLocationShareEmailAsync(toEmail, toName, userName, lat, lon);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send location email to {Email}", toEmail);
+        }
+    }
+
     // GET /api/alarm/history/{userId}
     [HttpGet("history/{userId:guid}")]
     public async Task<IActionResult> GetHistory(Guid userId)

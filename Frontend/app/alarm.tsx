@@ -14,8 +14,7 @@ import * as Location from "expo-location";
 import { Platform } from "react-native";
 import SentraTopBar from "@/components/SentraTopBar";
 import { useAuth } from "@/contexts/AuthContext";
-
-const API_BASE = "http://localhost:5255";
+import { API } from "@/config/api";
 
 function getPosition(): Promise<{ lat: number; lon: number; accuracy?: number }> {
   if (Platform.OS === "web") {
@@ -154,7 +153,7 @@ export default function AlarmScreen() {
       try {
         const { lat, lon } = await getPosition();
 
-        const res = await fetch(`${API_BASE}/api/alarm/trigger`, {
+        const res = await fetch(`${API}/api/alarm/trigger`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -190,7 +189,7 @@ export default function AlarmScreen() {
     locationIntervalRef.current = setInterval(async () => {
       try {
         const { lat, lon, accuracy } = await getPosition();
-        await fetch(`${API_BASE}/api/alarm/${eventId}/location`, {
+        await fetch(`${API}/api/alarm/${eventId}/location`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lat, lon, accuracy }),
@@ -205,7 +204,7 @@ export default function AlarmScreen() {
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     if (alarmEventId) {
       try {
-        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/cancel`, { method: "POST" });
+        await fetch(`${API}/api/alarm/${alarmEventId}/cancel`, { method: "POST" });
       } catch {}
     }
     router.replace("/(tabs)" as any);
@@ -214,7 +213,7 @@ export default function AlarmScreen() {
   async function handleConfirm() {
     if (alarmEventId) {
       try {
-        await fetch(`${API_BASE}/api/alarm/${alarmEventId}/confirm`, {
+        await fetch(`${API}/api/alarm/${alarmEventId}/confirm`, {
           method: "POST",
         });
       } catch {

@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Tab = {
   name: string;
@@ -19,8 +20,10 @@ const TABS: Tab[] = [
 ];
 
 export default function SentraTabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {TABS.map((tab, index) => {
         const isFocused = state.index === index;
 
@@ -59,8 +62,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#08141D",
     borderTopWidth: 1,
     borderTopColor: "#122030",
-    height: 62,
-    paddingBottom: 8,
     paddingTop: 6,
     paddingHorizontal: 4,
   },
