@@ -14,6 +14,8 @@ public class AlarmEvent
     public DateTime? EndedAt { get; set; }
 
     public string? Notes { get; set; }
+    public string? AudioUrl { get; set; }
+    public DateTime? AudioUploadedAt { get; set; }
 
     // Relations
     public ICollection<AudioClip> AudioClips { get; set; } = new List<AudioClip>();

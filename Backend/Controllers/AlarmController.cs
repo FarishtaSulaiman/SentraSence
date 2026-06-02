@@ -117,6 +117,58 @@ public class AlarmController : ControllerBase
         return Ok();
     }
 
+    // POST /api/alarm/{id}/audio
+[HttpPost("{id:guid}/audio")]
+public async Task<IActionResult> AttachAudio(Guid id, [FromBody] AudioUploadDto dto)
+{
+
+    Console.WriteLine("AttachAudio HIT");
+Console.WriteLine("AlarmEventId: " + id);
+Console.WriteLine("DTO UserId: " + dto.UserId);
+Console.WriteLine("DTO AudioUrl: " + dto.AudioUrl);
+    if (string.IsNullOrWhiteSpace(dto.AudioUrl))
+        return BadRequest("AudioUrl is required.");
+
+    var alarm = await _db.AlarmEvents.FindAsync(id);
+    if (alarm is null)
+        return NotFound("Alarm not found.");
+
+    // Hämta användaren (om du skickar med UserId i DTO)
+    var user = await _db.Users.FindAsync(dto.UserId);
+    if (user is null)
+        return NotFound("User not found.");
+
+    // Skapa AudioClip‑post
+    var clip = new AudioClip
+    {
+        AudioClipId = Guid.NewGuid(),
+        UserId = dto.UserId,
+        AlarmEventId = id,
+        StorageUrl = dto.AudioUrl,
+        DurationMs = dto.DurationMs,
+        RecordedAt = DateTime.UtcNow,
+        DeviceId = dto.DeviceId,
+        FileSizeBytes = dto.FileSizeBytes,
+        ScheduledDeletionAt = DateTime.UtcNow.AddDays(30)
+    };
+
+    _db.AudioClips.Add(clip);
+
+    // Uppdatera AlarmEvent (om du vill behålla detta)
+    alarm.AudioUrl = dto.AudioUrl;
+    alarm.AudioUploadedAt = DateTime.UtcNow;
+
+    await _db.SaveChangesAsync();
+
+    return Ok(new
+    {
+        message = "Audio attached.",
+        alarmEventId = id,
+        audioClipId = clip.AudioClipId
+    });
+}
+
+
     // POST /api/alarm/{id}/cancel
     // Avbryter larmet (falsklarm)
     [HttpPost("{id:guid}/cancel")]

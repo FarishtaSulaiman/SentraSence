@@ -44,6 +44,7 @@ public class PushNotificationService : IPushNotificationService
         };
 
         var payload = new[] { message };
+        using var content = JsonContent.Create(payload);
 
         try
         {
@@ -53,13 +54,16 @@ public class PushNotificationService : IPushNotificationService
                 body
             );
 
-            var response = await _httpClient.PostAsJsonAsync(ExpoPushApiUrl, payload);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var response = await _httpClient.PostAsync(ExpoPushApiUrl, content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"[PUSH] Expo status: {(int)response.StatusCode} {response.StatusCode}");
+            Console.WriteLine($"[PUSH] Expo response body: {responseBody}");
 
             _logger.LogInformation(
                 "Expo push response. StatusCode: {StatusCode}. Response: {Response}",
                 response.StatusCode,
-                responseContent
+                responseBody
             );
 
             if (!response.IsSuccessStatusCode)
@@ -67,12 +71,13 @@ public class PushNotificationService : IPushNotificationService
                 _logger.LogWarning(
                     "Expo push notification request failed. StatusCode: {StatusCode}. Response: {Response}",
                     response.StatusCode,
-                    responseContent
+                    responseBody
                 );
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[PUSH] Expo push failed: {ex}");
             _logger.LogError(ex, "An error occurred while sending Expo push notification.");
         }
     }
@@ -83,10 +88,14 @@ public class PushNotificationService : IPushNotificationService
         string body,
         object? data = null)
     {
+        Console.WriteLine($"[PUSH] Sending push to user: {userId}");
+
         var tokens = await _dbContext.PushNotificationTokens
             .Where(token => token.UserId == userId)
             .Select(token => token.Token)
             .ToListAsync();
+
+        Console.WriteLine($"[PUSH] Found {tokens.Count} token(s)");
 
         if (tokens.Count == 0)
         {
