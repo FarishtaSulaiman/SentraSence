@@ -153,9 +153,9 @@ function Countdown({
         </Text>
       </View>
       <View>
-        <Text style={styles.timerLabel}>Larmet fortsätter i</Text>
+        <Text style={styles.timerLabel}>Larm skickas om:</Text>
         <Text style={styles.timerSub}>
-          Tryck på Avbryt larm om du är i säkerhet.
+          Bekräfta eller avbryt innan nedräkningen når noll.
         </Text>
       </View>
     </View>
@@ -174,8 +174,8 @@ export default function AlarmScreen() {
   const [alarmEventId, setAlarmEventId] = useState<string | null>(null);
   const [contactCount, setContactCount] = useState(0);
   const [alarmStatus, setAlarmStatus] = useState<
-    "triggering" | "active" | "confirmed" | "cancelled"
-  >("triggering");
+    "countdown" | "triggering" | "active" | "confirmed" | "cancelled"
+  >("countdown");
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alarmEventIdRef = useRef<string | null>(null);
@@ -204,85 +204,58 @@ export default function AlarmScreen() {
     };
   }, [pulseAnim]);
 
-  // Trigger alarm on mount
+  // Cleanup on unmount
   useEffect(() => {
-    if (!user) return;
-
-    async function triggerAlarm() {
-      try {
-        const { lat, lon } = await getPosition();
-
-        console.log("Triggering alarm at", API_BASE, "for user", user!.userId);
-        const res = await fetch(`${API_BASE}/api/alarm/trigger`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user!.userId,
-            lat,
-            lon,
-            triggerType: "Manual",
-          }),
-        });
-
-        console.log("Alarm trigger response status:", res.status);
-
-        if (res.ok) {
-          const data = await res.json();
-          console.log("Alarm trigger response body:", data);
-          alarmEventIdRef.current = data.alarmEventId;
-          setAlarmEventId(data.alarmEventId);
-          setContactCount(data.contactsNotified);
-          setAlarmStatus("active");
-          await refreshUnreadCount();
-          startLocationTracking(data.alarmEventId);
-
-           //Skicka ljudfilens URL till backend
-  //       if (audioUrl) {
-  //         await fetch(`${API_BASE}/api/alarm/${data.alarmEventId}/audio`, {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({
-  //           userId: user!.userId,
-  //           audioUrl,
-  //         }),
-  //       });
-  // }
-        } else {
-          const errorText = await res.text();
-          console.error("Alarm trigger failed", res.status, errorText);
-          setAlarmStatus("active");
-        }
-      } catch (err) {
-        console.error("Error triggering alarm", err);
-        setAlarmStatus("active");
-      }
-    }
-
-    triggerAlarm();
-
     return () => {
       if (locationIntervalRef.current)
         clearInterval(locationIntervalRef.current);
     };
-  }, [user, refreshUnreadCount]);
+  }, []);
 
   async function triggerEmergencyFlow() {
     if (hasTriggeredEmergencyRef.current) return;
+    hasTriggeredEmergencyRef.current = true;
 
-    console.log("Emergency flow started. activeAlarmId:", alarmEventIdRef.current ?? alarmEventId);
-    setAlarmStatus("confirmed");
+    setAlarmStatus("triggering");
 
-    const activeAlarmId = alarmEventIdRef.current ?? alarmEventId;
-    if (!activeAlarmId) {
-      console.error("No active alarm ID available for emergency flow");
-      hasTriggeredEmergencyRef.current = false;
-      return;
+    // Trigger alarm (send notifications to contacts)
+    let activeAlarmId: string | null = null;
+    try {
+      const { lat, lon } = await getPosition();
+      console.log("Triggering alarm at", API_BASE, "for user", user?.userId);
+      const res = await fetch(`${API_BASE}/api/alarm/trigger`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.userId,
+          lat,
+          lon,
+          triggerType: "Manual",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Alarm trigger response body:", data);
+        alarmEventIdRef.current = data.alarmEventId;
+        activeAlarmId = data.alarmEventId;
+        setAlarmEventId(data.alarmEventId);
+        setContactCount(data.contactsNotified);
+        startLocationTracking(data.alarmEventId);
+      } else {
+        const errorText = await res.text();
+        console.error("Alarm trigger failed", res.status, errorText);
+      }
+    } catch (err) {
+      console.error("Error triggering alarm", err);
     }
 
-    hasTriggeredEmergencyRef.current = true;
-    console.log("Emergency flow started. activeAlarmId:", activeAlarmId);
-    
-    await handleConfirm(activeAlarmId);
+    setAlarmStatus("confirmed");
+    await refreshUnreadCount();
+
+    if (activeAlarmId) {
+      await handleConfirm(activeAlarmId);
+    }
 
     try {
       console.log("Starting recording…");
@@ -302,24 +275,23 @@ export default function AlarmScreen() {
           const blobUrl = await uploadAudioToBlob(uri, fileName);
           console.log("Blob uploaded to:", blobUrl);
 
-          const attachRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/audio`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user?.userId,
-              audioUrl: blobUrl,
-            }),
-          });
+          if (activeAlarmId) {
+            const attachRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/audio`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: user?.userId,
+                audioUrl: blobUrl,
+              }),
+            });
 
-          console.log("Attach response status:", attachRes.status);
-
-          if (!attachRes.ok) {
-            const errorText = await attachRes.text();
-            console.error("Failed to attach audio", attachRes.status, errorText);
-            return;
+            if (!attachRes.ok) {
+              const errorText = await attachRes.text();
+              console.error("Failed to attach audio", attachRes.status, errorText);
+            } else {
+              console.log("Audio attached successfully");
+            }
           }
-
-          console.log("Audio attached successfully");
         } catch (err) {
           console.error("Recording/upload flow error", err);
         } finally {
@@ -328,7 +300,6 @@ export default function AlarmScreen() {
       }, 10000);
     } catch (err) {
       console.error("Failed to start recording", err);
-      hasTriggeredEmergencyRef.current = false;
     }
   }
 
@@ -353,7 +324,8 @@ export default function AlarmScreen() {
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
-    if (alarmEventId) {
+    // Only call cancel API if alarm was actually triggered
+    if (alarmEventId && alarmStatus !== "countdown") {
       try {
         await fetch(`${API}/api/alarm/${alarmEventId}/cancel`, {
           method: "POST",
@@ -377,6 +349,7 @@ export default function AlarmScreen() {
     setAlarmStatus("confirmed");
   }
 
+  const isCountdown = alarmStatus === "countdown";
   const isTriggering = alarmStatus === "triggering";
   const isConfirmed = alarmStatus === "confirmed";
 
@@ -404,7 +377,7 @@ export default function AlarmScreen() {
           {isConfirmed ? "HJÄLP PÅ VÄG" : "NÖDLARM AKTIVERAT"}
         </Text>
         <Text style={styles.alarmSub}>
-          {isConfirmed ? "(BEKRÄFTAT)" : "(AUTOMATISKT)"}
+          {isConfirmed ? "(BEKRÄFTAT)" : isCountdown ? "(VÄNTAR)" : "(SKICKAR...)"}
         </Text>
 
         {/* Pulse icon */}
@@ -441,10 +414,9 @@ export default function AlarmScreen() {
         <Text style={styles.desc}>
           {isConfirmed
             ? "Dina kontakter har fått ett SMS. Din position uppdateras tills larmet stängs."
-            : "AI-övervakningen har upptäckt ett nödmönster och aktiverat "}
-          {!isConfirmed && (
-            <Text style={styles.descHighlight}>larmet automatiskt.</Text>
-          )}
+            : isCountdown
+            ? "Larmet är inte skickat ännu. Bekräfta att du behöver hjälp eller vänta tills nedräkningen når noll."
+            : "Larmet skickas nu till dina kontakter..."}
         </Text>
 
         {/* Status items */}
@@ -453,48 +425,50 @@ export default function AlarmScreen() {
             icon="notifications"
             iconColor="#E63946"
             title="Larm skickas"
-            desc="Dina kontakter notifieras nu."
-            statusText={isTriggering ? "Skickas..." : "Skickat"}
-            statusColor={isTriggering ? "#E63946" : "#2ECC71"}
+            desc={isCountdown ? "Väntar på bekräftelse eller nedräkning." : "Dina kontakter notifieras nu."}
+            statusText={isCountdown ? "Väntar" : isTriggering ? "Skickas..." : "Skickat"}
+            statusColor={isCountdown ? "#F39C12" : isTriggering ? "#E63946" : "#2ECC71"}
             showSpinner={isTriggering}
           />
           <StatusItem
             icon="location"
             iconColor="#00D8E6"
             title="Position delas"
-            desc="Din plats uppdateras i realtid."
-            statusText="Aktiv"
-            statusColor="#2ECC71"
+            desc={isCountdown ? "Aktiveras när larmet skickas." : "Din plats uppdateras i realtid."}
+            statusText={isCountdown ? "Väntar" : "Aktiv"}
+            statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
           <StatusItem
             icon="mic"
             iconColor="#9B59B6"
-            title="Ljudinspelning aktiv"
-            desc="Mikrofonen spelar in omgivningen."
-            statusText="Aktiv"
-            statusColor="#2ECC71"
+            title="Ljudinspelning"
+            desc={isCountdown ? "Aktiveras när larmet skickas." : "Mikrofonen spelar in omgivningen."}
+            statusText={isCountdown ? "Väntar" : "Aktiv"}
+            statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
           <StatusItem
             icon="shield"
             iconColor="#F39C12"
-            title="AI-analys pågår"
-            desc="Analyserar ljud för att förstå situationen."
-            statusText="Aktiv"
-            statusColor="#2ECC71"
+            title="AI-analys"
+            desc={isCountdown ? "Aktiveras när larmet skickas." : "Analyserar ljud för att förstå situationen."}
+            statusText={isCountdown ? "Väntar" : "Aktiv"}
+            statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
           <StatusItem
             icon="people"
             iconColor="#2ECC71"
             title="Kontakter larmade"
             desc={
-              isTriggering
+              isCountdown
+                ? "Ingen kontakt har notifierats ännu."
+                : isTriggering
                 ? "Kontaktar dina nödkontakter..."
                 : `${contactCount} nödkontakt${contactCount !== 1 ? "er" : ""} har notifierats.`
             }
             statusText={
-              isTriggering ? "..." : `${contactCount} av ${contactCount}`
+              isCountdown ? "Väntar" : isTriggering ? "..." : `${contactCount} av ${contactCount}`
             }
-            statusColor={isTriggering ? "#F39C12" : "#2ECC71"}
+            statusColor={isCountdown ? "#F39C12" : isTriggering ? "#F39C12" : "#2ECC71"}
             showSpinner={isTriggering}
           />
         </View>
