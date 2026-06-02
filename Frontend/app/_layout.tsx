@@ -41,6 +41,7 @@ export default function RootLayout() {
           <Stack.Screen name="terms" />
           <Stack.Screen name="biometric-info" />
           <Stack.Screen name="location-sharing-info" />
+          <Stack.Screen name="share-location" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="native/VoskTestScreen" />
         </Stack>

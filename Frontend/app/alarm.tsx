@@ -20,7 +20,6 @@ import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { startRecording, stopRecording } from "@/services/audioService";
 import { uploadAudioToBlob } from "@/services/blobUploadService";
 
-
 const API_BASE = API;
 
 function getPosition(): Promise<{
@@ -364,19 +363,19 @@ export default function AlarmScreen() {
     router.replace("/(tabs)" as any);
   }
 
-async function handleConfirm(activeAlarmId: string) {
-  try {
-    await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/confirm`, {
-      method: "POST",
-    });
+  async function handleConfirm(activeAlarmId: string) {
+    try {
+      await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/confirm`, {
+        method: "POST",
+      });
 
-    await refreshUnreadCount();
-  } catch (err) {
-    console.error("Error confirming alarm", err);
+      await refreshUnreadCount();
+    } catch (err) {
+      console.error("Error confirming alarm", err);
+    }
+
+    setAlarmStatus("confirmed");
   }
-
-  setAlarmStatus("confirmed");
-}
 
   const isTriggering = alarmStatus === "triggering";
   const isConfirmed = alarmStatus === "confirmed";
