@@ -21,6 +21,11 @@ import {
 } from "@/services/notificationService";
 import SentraTopBar from "@/components/SentraTopBar";
 
+type AlarmEvent = {
+  alarmEventId: string;
+  status: "Active" | "Confirmed" | "Cancelled";
+};
+
 const VISIBLE_NOTIFICATION_TYPES = new Set([
   "alarm_triggered",
   "contacts_notified",
@@ -55,6 +60,9 @@ const NOTIFICATION_META: Record<
 export default function Notifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [alarmStatuses, setAlarmStatuses] = useState<
+    Record<string, AlarmEvent["status"]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -65,16 +73,32 @@ export default function Notifications() {
   const fetchNotifications = useCallback(async () => {
     if (!user?.userId) {
       setNotifications([]);
+      setAlarmStatuses({});
       setLoading(false);
       setRefreshing(false);
       return;
     }
 
     try {
-      const data = await fetchUserNotifications(user.userId);
+      const [notificationData, historyData] = await Promise.all([
+        fetchUserNotifications(user.userId),
+        fetch(`${API}/api/alarm/history/${user.userId}`).then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to fetch alarm history");
+          }
+
+          return response.json() as Promise<AlarmEvent[]>;
+        }),
+      ]);
+
       setNotifications(
-        data.filter((notification) =>
+        notificationData.filter((notification) =>
           VISIBLE_NOTIFICATION_TYPES.has(notification.type),
+        ),
+      );
+      setAlarmStatuses(
+        Object.fromEntries(
+          historyData.map((event) => [event.alarmEventId, event.status]),
         ),
       );
     } catch (error) {
@@ -195,7 +219,9 @@ export default function Notifications() {
           </View>
         ) : (
           notifications.map((notification) => {
-            const canCancel = notification.type === "alarm_triggered";
+            const canCancel =
+              notification.type === "alarm_triggered" &&
+              alarmStatuses[notification.alarmEventId ?? ""] === "Active";
             const meta =
               NOTIFICATION_META[notification.type] ??
               NOTIFICATION_META.alarm_triggered;
