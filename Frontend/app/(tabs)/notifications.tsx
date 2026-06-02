@@ -219,9 +219,13 @@ export default function Notifications() {
           </View>
         ) : (
           notifications.map((notification) => {
+            const alarmStatus = alarmStatuses[notification.alarmEventId ?? ""];
             const canCancel =
               notification.type === "alarm_triggered" &&
-              alarmStatuses[notification.alarmEventId ?? ""] === "Active";
+              alarmStatus === "Active";
+            const showCancelledBadge =
+              notification.type === "alarm_triggered" &&
+              alarmStatus === "Cancelled";
             const meta =
               NOTIFICATION_META[notification.type] ??
               NOTIFICATION_META.alarm_triggered;
@@ -251,15 +255,31 @@ export default function Notifications() {
                 <View style={styles.cardBody}>
                   <View style={styles.cardTop}>
                     <Text style={styles.cardTitle}>{notification.title}</Text>
-                    <View
-                      style={[
-                        styles.badge,
-                        { backgroundColor: meta.color + "22" },
-                      ]}
-                    >
-                      <Text style={[styles.badgeText, { color: meta.color }]}>
-                        {meta.label}
-                      </Text>
+                    <View style={styles.badgeRow}>
+                      <View
+                        style={[
+                          styles.badge,
+                          { backgroundColor: meta.color + "22" },
+                        ]}
+                      >
+                        <Text style={[styles.badgeText, { color: meta.color }]}>
+                          {meta.label}
+                        </Text>
+                      </View>
+                      {showCancelledBadge ? (
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: "#2ECC7122" },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.badgeText, { color: "#2ECC71" }]}
+                          >
+                            Avbrutet
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
 
@@ -362,6 +382,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   badgeText: {
     fontSize: 11,
