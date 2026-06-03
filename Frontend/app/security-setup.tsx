@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  Platform,
   ActivityIndicator,
   Modal,
 } from "react-native";
@@ -1059,7 +1058,12 @@ export default function SecuritySetup() {
 
   useEffect(() => {
     codewordManager.setTriggerEnabled(false);
+
+    return () => {
+      codewordManager.setTriggerEnabled(true);
+    };
   }, []);
+
   // TODO: återaktivera inför release — kommenterat ut under byggtid
   // useEffect(() => {
   //   if (!user) router.replace("/login");
