@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Pressable } from "react-native";
+import { View, Text, FlatList, StyleSheet, Pressable } from "react-native";
 import { Audio } from "expo-av";
 import {useAuth} from "@/contexts/AuthContext";
 import { API } from "@/config/api";
@@ -63,37 +63,56 @@ export default function AudioHistoryScreen() {
   }, [fetchAudioList, userId]); 
 
   async function play(item: AudioItem) {
-    try {
-      // Stoppa tidigare ljud
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: item.url },
-        { shouldPlay: true }
-      );
-
-      soundRef.current = sound;
-      setPlayingId(item.id);
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) return;
-        if (status.didJustFinish) {
-          setPlayingId(null);
-        }
-      });
-    } catch (err) {
-      console.error("Playback error:", err);
+  try {
+    // Stoppa tidigare ljud om det är ett annat
+    if (soundRef.current && playingId !== item.id) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
     }
+
+    // Om samma ljud redan är laddat → bara spela
+    if (soundRef.current && playingId === item.id) {
+      await soundRef.current.playAsync();
+      return;
+    }
+
+    // Annars ladda nytt ljud
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: item.url },
+      { shouldPlay: true }
+    );
+
+    soundRef.current = sound;
+    setPlayingId(item.id);
+
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ("didJustFinish" in status && status.didJustFinish) {
+  setPlayingId(null);
+}
+    });
+  } catch (err) {
+    console.error("Playback error:", err);
   }
+}
+
 
   function renderItem({ item }: { item: AudioItem }) {
     const isPlaying = item.id === playingId;
 
-    return (
+    async function togglePlay(item: AudioItem) {
+  // Om samma ljud spelas - stoppa
+  if (soundRef.current && playingId === item.id) {
+    await soundRef.current.stopAsync();
+    await soundRef.current.unloadAsync();
+    soundRef.current = null;
+    setPlayingId(null);
+    return;
+  }
+  play(item);
+}
+
+return (
       <View style={styles.audioCard}>
   <View style={styles.audioLeft}>
     <View style={styles.audioIconWrap}>
@@ -114,9 +133,9 @@ export default function AudioHistoryScreen() {
     </View>
   </View>
 
-  <Pressable style={styles.playBtn} onPress={() => play(item)}>
+  <Pressable style={styles.playBtn} onPress={() => togglePlay(item)}>
     <Ionicons
-      name={isPlaying ? "pause" : "play"}
+      name={isPlaying ? "stop" : "play"}
       size={18}
       color="#08141D"
     />
