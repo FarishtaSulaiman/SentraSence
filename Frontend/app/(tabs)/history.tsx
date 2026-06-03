@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
 import SentraTopBar from "@/components/SentraTopBar";
+import { router } from "expo-router";
 
 type AlarmEvent = {
   alarmEventId: string;
@@ -132,7 +133,15 @@ export default function History() {
           />
         }
       >
-        <Text style={styles.pageTitle}>Historik</Text>
+        <View style={styles.titleRow}>
+  <Text style={styles.pageTitle}>Historik</Text>
+
+  <Pressable onPress={() => router.push("/audio-history")}>
+    <View style={styles.audioIconWrap}>
+      <Ionicons name="musical-notes-outline" size={16} color="#00D8E6" />
+    </View>
+  </Pressable>
+</View>
         <Text style={styles.pageSub}>Dina senaste larmhändelser</Text>
 
         {loading && (
@@ -189,5 +198,23 @@ const styles = StyleSheet.create({
   emptySubText:  { color: "#2A4050", fontSize: 12, marginTop: 6, textAlign: "center" },
   retryBtn:      { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#0D1F2D", borderRadius: 10, borderWidth: 1, borderColor: "#1A3040" },
   retryText:     { color: "#00D8E6", fontSize: 13, fontWeight: "700" },
+  
+  titleRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 4,
+},
+audioIconWrap: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: "#0D1F2D",
+  borderWidth: 1,
+  borderColor: "#1A3040",
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 2,
+},
 });
 
