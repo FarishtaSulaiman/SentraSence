@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SentraTopBar() {
@@ -17,9 +17,15 @@ export default function SentraTopBar() {
     return () => clearInterval(interval);
   }, []);
 
+  // ⛔ Hooks är redan körda — nu får vi returnera villkorligt
+  if (Platform.OS === "android" || Platform.OS === "ios") {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.time}>{time}</Text>
+
       <View style={styles.right}>
         {/* Signal */}
         <View style={styles.signalWrap}>
@@ -27,8 +33,10 @@ export default function SentraTopBar() {
             <View key={i} style={[styles.signalBar, { height: h }]} />
           ))}
         </View>
+
         {/* Wifi */}
         <Ionicons name="wifi" size={13} color="#FFFFFF" style={{ marginLeft: 5 }} />
+
         {/* Battery */}
         <View style={styles.batteryWrap}>
           <View style={styles.batteryBody}>
