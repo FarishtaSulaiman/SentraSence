@@ -205,12 +205,47 @@ export default function AlarmScreen() {
   }, [pulseAnim]);
 
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (locationIntervalRef.current)
-        clearInterval(locationIntervalRef.current);
-    };
-  }, []);
+useEffect(() => {
+  return () => {
+    console.log("AlarmScreen unmounted → cleaning up");
+
+    // 1. Stoppa GPS‑tracking
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+      locationIntervalRef.current = null;
+    }
+
+    // 2. Stoppa timeout om den väntar
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+
+    // 3. Stoppa inspelningen direkt
+    stopRecording()
+      .then(async (uri) => {
+        if (!uri) return;
+
+        // 4. Ladda upp ljudet
+        const fileName = `alert_${Date.now()}.m4a`;
+        const blobUrl = await uploadAudioToBlob(uri, fileName);
+
+        // 5. Koppla ljudet till alarmEvent
+        if (alarmEventIdRef.current) {
+          await fetch(`${API_BASE}/api/alarm/${alarmEventIdRef.current}/audio`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user?.userId,
+              audioUrl: blobUrl,
+            }),
+          });
+        }
+      })
+      .catch(() => {});
+  };
+}, []);
+
 
   async function triggerEmergencyFlow() {
     if (hasTriggeredEmergencyRef.current) return;
