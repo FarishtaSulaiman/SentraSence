@@ -26,11 +26,14 @@ const CONSENT_VERSION = "1.0";
 // ─── Step indicator ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current }: { current: number }) {
+  const steps = [1, 2, 3]; 
+
   return (
     <View style={styles.stepRow}>
-      {[1, 2, 3, 4].map((step, i) => {
+      {steps.map((step, i) => {
         const done = step < current;
         const active = step === current;
+
         return (
           <React.Fragment key={step}>
             <View
@@ -48,7 +51,8 @@ function StepIndicator({ current }: { current: number }) {
                 </Text>
               )}
             </View>
-            {i < 3 && (
+
+            {i < steps.length - 1 && (
               <View style={[styles.stepLine, done && styles.stepLineDone]} />
             )}
           </React.Fragment>
@@ -474,7 +478,7 @@ export function Step2({ onNext, onBack, codeword, setCodeword, user, setUser }: 
         <View style={{ width: 28 }} />
       </View>
 
-      <Text style={styles.stepLabel}>Steg 2 av 4</Text>
+      <Text style={styles.stepLabel}>Steg 2 av 3</Text>
       <Text style={styles.title}>Välj ditt kodord</Text>
       <Text style={styles.subtitle}>
         Välj en fras som känns naturlig att säga i en stressad situation. Appen
@@ -632,166 +636,166 @@ export function Step2({ onNext, onBack, codeword, setCodeword, user, setUser }: 
 //#endregion
 //#region ─── STEP 3: Träna kodord (MediaRecorder, fungerar på webb) ───────────────────
 
-type RecordingState = "idle" | "countdown" | "recording";
+// type RecordingState = "idle" | "countdown" | "recording";
 
-function Step3({ onNext, onBack, codeword }: { onNext: () => void; onBack: () => void; codeword: string }) {
-  const [attempts, setAttempts] = useState([false, false, false]);
-  const [recState, setRecState] = useState<RecordingState>("idle");
-  const [countdown, setCountdown] = useState(3);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+// function Step3({ onNext, onBack, codeword }: { onNext: () => void; onBack: () => void; codeword: string }) {
+//   const [attempts, setAttempts] = useState([false, false, false]);
+//   const [recState, setRecState] = useState<RecordingState>("idle");
+//   const [countdown, setCountdown] = useState(3);
+//   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const currentIdx = attempts.indexOf(false);
-  const allDone = attempts.every(Boolean);
+//   const currentIdx = attempts.indexOf(false);
+//   const allDone = attempts.every(Boolean);
 
-  const startRecording = async () => {
-    if (recState !== "idle" || allDone) return;
+//   const startRecording = async () => {
+//     if (recState !== "idle" || allDone) return;
 
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Inte tillgänglig på mobil ännu",
-        "Röstträning via mikrofon är tillgänglig i webbläsaren. På mobil kan du hoppa över detta steg och träna senare i appen."
-      );
-      return;
-    }
+//     if (Platform.OS !== "web") {
+//       Alert.alert(
+//         "Inte tillgänglig på mobil ännu",
+//         "Röstträning via mikrofon är tillgänglig i webbläsaren. På mobil kan du hoppa över detta steg och träna senare i appen."
+//       );
+//       return;
+//     }
 
-    try {
-      const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
-      setRecState("countdown");
-      setCountdown(3);
-      let c = 3;
-      countdownRef.current = setInterval(() => {
-        c -= 1;
-        setCountdown(c);
-        if (c <= 0) {
-          clearInterval(countdownRef.current!);
-          beginCapture(stream);
-        }
-      }, 1000);
-    } catch {
-      Alert.alert(
-        "Mikrofonåtkomst nekad",
-        "SentraSense behöver komma åt mikrofonen för röstträning. Kontrollera webbläsarens behörighetsinställningar."
-      );
-    }
-  };
+//     try {
+//       const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
+//       setRecState("countdown");
+//       setCountdown(3);
+//       let c = 3;
+//       countdownRef.current = setInterval(() => {
+//         c -= 1;
+//         setCountdown(c);
+//         if (c <= 0) {
+//           clearInterval(countdownRef.current!);
+//           beginCapture(stream);
+//         }
+//       }, 1000);
+//     } catch {
+//       Alert.alert(
+//         "Mikrofonåtkomst nekad",
+//         "SentraSense behöver komma åt mikrofonen för röstträning. Kontrollera webbläsarens behörighetsinställningar."
+//       );
+//     }
+//   };
 
-  const beginCapture = (stream: MediaStream) => {
-    const chunks: Blob[] = [];
-    const mr = new MediaRecorder(stream);
-    mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-    mr.onstop = () => {
-      stream.getTracks().forEach((t) => t.stop());
-      setAttempts((prev) => {
-        const next = [...prev];
-        const idx = next.indexOf(false);
-        if (idx !== -1) next[idx] = true;
-        return next;
-      });
-      setRecState("idle");
-    };
-    mr.start();
-    setRecState("recording");
-    setTimeout(() => { if (mr.state !== "inactive") mr.stop(); }, 3000);
-  };
+//   const beginCapture = (stream: MediaStream) => {
+//     const chunks: Blob[] = [];
+//     const mr = new MediaRecorder(stream);
+//     mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+//     mr.onstop = () => {
+//       stream.getTracks().forEach((t) => t.stop());
+//       setAttempts((prev) => {
+//         const next = [...prev];
+//         const idx = next.indexOf(false);
+//         if (idx !== -1) next[idx] = true;
+//         return next;
+//       });
+//       setRecState("idle");
+//     };
+//     mr.start();
+//     setRecState("recording");
+//     setTimeout(() => { if (mr.state !== "inactive") mr.stop(); }, 3000);
+//   };
 
-  const label =
-    recState === "countdown" ? `Börja tala om ${countdown} sekunder...` :
-    recState === "recording" ? "Lyssnar – säg kodordet nu!" :
-    allDone ? "Alla 3 försök klara!" :
-    `Tryck för försök ${(currentIdx < 0 ? 3 : currentIdx) + 1} av 3`;
+//   const label =
+//     recState === "countdown" ? `Börja tala om ${countdown} sekunder...` :
+//     recState === "recording" ? "Lyssnar – säg kodordet nu!" :
+//     allDone ? "Alla 3 försök klara!" :
+//     `Tryck för försök ${(currentIdx < 0 ? 3 : currentIdx) + 1} av 3`;
 
-  return (
-    <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.topBar}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={20} color="#00D8E6" />
-        </Pressable>
-        <StepIndicator current={3} />
-        <View style={{ width: 28 }} />
-      </View>
+//   return (
+//     <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+//       <View style={styles.topBar}>
+//         <Pressable onPress={onBack} style={styles.backBtn}>
+//           <Ionicons name="arrow-back" size={20} color="#00D8E6" />
+//         </Pressable>
+//         <StepIndicator current={3} />
+//         <View style={{ width: 28 }} />
+//       </View>
 
-      <Text style={styles.stepLabel}>Steg 3 av 4</Text>
-      <Text style={styles.title}>Träna ditt kodord</Text>
-      <Text style={styles.subtitle}>
-        Säg kodordet 3 gånger med tydlig röst i normal samtalston. AI-modellen lär
-        sig känna igen just din röst för att minska falska larm.
-      </Text>
+//       <Text style={styles.stepLabel}>Steg 3 av 4</Text>
+//       <Text style={styles.title}>Träna ditt kodord</Text>
+//       <Text style={styles.subtitle}>
+//         Säg kodordet 3 gånger med tydlig röst i normal samtalston. AI-modellen lär
+//         sig känna igen just din röst för att minska falska larm.
+//       </Text>
 
-      <View style={styles.codewordDisplay}>
-        <Ionicons name="chatbubble" size={14} color="#00D8E6" style={{ marginRight: 6 }} />
-        <Text style={styles.codewordText}>{`"${codeword}"`}</Text>
-      </View>
+//       <View style={styles.codewordDisplay}>
+//         <Ionicons name="chatbubble" size={14} color="#00D8E6" style={{ marginRight: 6 }} />
+//         <Text style={styles.codewordText}>{`"${codeword}"`}</Text>
+//       </View>
 
-      <View style={styles.micArea}>
-        <Pressable
-          style={[
-            styles.micBtn,
-            recState === "recording" && styles.micBtnActive,
-            (allDone || recState === "countdown") && styles.micBtnDisabled,
-          ]}
-          onPress={startRecording}
-          disabled={allDone || recState !== "idle"}
-        >
-          {recState === "countdown" ? (
-            <Text style={styles.countdownText}>{countdown}</Text>
-          ) : recState === "recording" ? (
-            <Ionicons name="radio-button-on" size={32} color="#FF4444" />
-          ) : (
-            <Ionicons name="mic" size={32} color="#fff" />
-          )}
-        </Pressable>
-      </View>
+//       <View style={styles.micArea}>
+//         <Pressable
+//           style={[
+//             styles.micBtn,
+//             recState === "recording" && styles.micBtnActive,
+//             (allDone || recState === "countdown") && styles.micBtnDisabled,
+//           ]}
+//           onPress={startRecording}
+//           disabled={allDone || recState !== "idle"}
+//         >
+//           {recState === "countdown" ? (
+//             <Text style={styles.countdownText}>{countdown}</Text>
+//           ) : recState === "recording" ? (
+//             <Ionicons name="radio-button-on" size={32} color="#FF4444" />
+//           ) : (
+//             <Ionicons name="mic" size={32} color="#fff" />
+//           )}
+//         </Pressable>
+//       </View>
 
-      <Text style={styles.micHint}>{label}</Text>
+//       <Text style={styles.micHint}>{label}</Text>
 
-      <View style={[styles.cardList, { marginTop: 16 }]}>
-        {attempts.map((done, i) => (
-          <View
-            key={i}
-            style={[styles.attemptRow, i === currentIdx && !done && styles.attemptRowActive]}
-          >
-            <View style={[styles.attemptIcon, done && styles.attemptIconDone]}>
-              {done ? (
-                <Ionicons name="checkmark" size={12} color="#00D8E6" />
-              ) : i === currentIdx ? (
-                <Ionicons name="mic" size={10} color="#00D8E6" />
-              ) : (
-                <View style={styles.attemptDot} />
-              )}
-            </View>
-            <Text style={[styles.attemptLabel, done && styles.attemptLabelDone]}>Försök {i + 1}</Text>
-            <View style={styles.waveformSmall}>
-              {[4, 10, 6, 14, 8, 12, 5].map((h, j) => (
-                <View key={j} style={[styles.waveBarSmall, { height: h }, done && styles.waveBarDone]} />
-              ))}
-            </View>
-            {done ? (
-              <Ionicons name="checkmark-circle" size={16} color="#00D8E6" />
-            ) : (
-              <Ionicons name="ellipse-outline" size={16} color="#1C3040" />
-            )}
-          </View>
-        ))}
-      </View>
+//       <View style={[styles.cardList, { marginTop: 16 }]}>
+//         {attempts.map((done, i) => (
+//           <View
+//             key={i}
+//             style={[styles.attemptRow, i === currentIdx && !done && styles.attemptRowActive]}
+//           >
+//             <View style={[styles.attemptIcon, done && styles.attemptIconDone]}>
+//               {done ? (
+//                 <Ionicons name="checkmark" size={12} color="#00D8E6" />
+//               ) : i === currentIdx ? (
+//                 <Ionicons name="mic" size={10} color="#00D8E6" />
+//               ) : (
+//                 <View style={styles.attemptDot} />
+//               )}
+//             </View>
+//             <Text style={[styles.attemptLabel, done && styles.attemptLabelDone]}>Försök {i + 1}</Text>
+//             <View style={styles.waveformSmall}>
+//               {[4, 10, 6, 14, 8, 12, 5].map((h, j) => (
+//                 <View key={j} style={[styles.waveBarSmall, { height: h }, done && styles.waveBarDone]} />
+//               ))}
+//             </View>
+//             {done ? (
+//               <Ionicons name="checkmark-circle" size={16} color="#00D8E6" />
+//             ) : (
+//               <Ionicons name="ellipse-outline" size={16} color="#1C3040" />
+//             )}
+//           </View>
+//         ))}
+//       </View>
 
-      <View style={[styles.infoBox, { marginTop: 16 }]}>
-        <Ionicons name="information-circle" size={15} color="#00D8E6" style={{ marginRight: 8 }} />
-        <Text style={styles.infoText}>
-          Röstproverna lagras krypterat i 90 dagar och används enbart för att
-          personanpassa AI-detektionen av just ditt kodord. De delas aldrig med
-          tredje part och kan raderas via Inställningar.
-        </Text>
-      </View>
+//       <View style={[styles.infoBox, { marginTop: 16 }]}>
+//         <Ionicons name="information-circle" size={15} color="#00D8E6" style={{ marginRight: 8 }} />
+//         <Text style={styles.infoText}>
+//           Röstproverna lagras krypterat i 90 dagar och används enbart för att
+//           personanpassa AI-detektionen av just ditt kodord. De delas aldrig med
+//           tredje part och kan raderas via Inställningar.
+//         </Text>
+//       </View>
 
-      <Pressable style={styles.btn} onPress={onNext}>
-        <Text style={styles.btnText}>
-          {allDone ? "Fortsätt" : "Hoppa över – träna senare i appen"}
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
-      </Pressable>
-    </ScrollView>
-  );
-}
+//       <Pressable style={styles.btn} onPress={onNext}>
+//         <Text style={styles.btnText}>
+//           {allDone ? "Fortsätt" : "Hoppa över – träna senare i appen"}
+//         </Text>
+//         <Ionicons name="chevron-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+//       </Pressable>
+//     </ScrollView>
+//   );
+// }
 //#endregion
 //#region ─── STEP 4: Nödkontakter ─────────────────────────────────────────────────────
 
@@ -955,7 +959,7 @@ function Step4({ onFinish, onBack }: { onFinish: () => void; onBack: () => void 
         <View style={{ width: 28 }} />
       </View>
 
-      <Text style={styles.stepLabel}>Steg 4 av 4</Text>
+      <Text style={styles.stepLabel}>Steg 3 av 3</Text>
       <Text style={styles.title}>Nödkontakter</Text>
       <Text style={styles.subtitle}>
         Lägg till personer som automatiskt larmas vid nödsituation. De får din position och en ljudinspelning.
@@ -1061,7 +1065,7 @@ export default function SecuritySetup() {
   //   if (!user) router.replace("/login");
   // }, [user]);
 
-  const next = () => setStep((s) => Math.min(s + 1, 4));
+  const next = () => setStep((s) => Math.min(s + 1, 3));
   const back = () => setStep((s) => Math.max(s - 1, 1));
   const finish = () => {
     // Uppdatera context så att hem-sidan reflekterar rätt status direkt
@@ -1084,8 +1088,8 @@ export default function SecuritySetup() {
           setUser={setUser}
         />
       )}
-      {step === 3 && <Step3 onNext={next} onBack={back} codeword={codeword} />}
-      {step === 4 && <Step4 onFinish={finish} onBack={back} />}
+      {/* {step === 3 && <Step3 onNext={next} onBack={back} codeword={codeword} />} */}
+      {step === 3 && <Step4 onFinish={finish} onBack={back} />}
     </SafeAreaView>
   );
 }

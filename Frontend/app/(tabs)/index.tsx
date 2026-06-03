@@ -90,7 +90,6 @@ function QuickAction({
 // Dashboard
 export default function Dashboard() {
   const { user } = useAuth();
-  const showTrainingBanner = user && !user.codewordTrained;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [recentEvents, setRecentEvents] = useState<AlarmEvent[]>([]);
   const [showCheckModal, setShowCheckModal] = useState(false);
@@ -245,27 +244,6 @@ export default function Dashboard() {
             </View>
           </View>
         </View>
-
-        {/* AI-träning saknas — banner */}
-        {showTrainingBanner && (
-          <Pressable
-            style={styles.trainingBanner}
-            onPress={() => router.push("/security-setup" as any)}
-          >
-            <View style={styles.trainingBannerLeft}>
-              <Ionicons name="mic-outline" size={20} color="#F39C12" />
-              <View style={{ marginLeft: 10, flex: 1 }}>
-                <Text style={styles.trainingBannerTitle}>
-                  AI-kodordsträning saknas
-                </Text>
-                <Text style={styles.trainingBannerSub}>
-                  Tryck här för att slutföra träningen
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#F39C12" />
-          </Pressable>
-        )}
 
         {/* Quick actions */}
         <View style={styles.sectionHeader}>
