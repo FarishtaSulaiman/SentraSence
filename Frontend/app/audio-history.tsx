@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, Pressable } from "react-native";
 import { Audio } from "expo-av";
 import {useAuth} from "@/contexts/AuthContext";
 import { API } from "@/config/api";
+import { Ionicons } from "@expo/vector-icons";
 
 type AudioItem = {
   id: string;
@@ -62,58 +63,90 @@ export default function AudioHistoryScreen() {
   }, [fetchAudioList, userId]); 
 
   async function play(item: AudioItem) {
-    try {
-      // Stoppa tidigare ljud
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: item.url },
-        { shouldPlay: true }
-      );
-
-      soundRef.current = sound;
-      setPlayingId(item.id);
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) return;
-        if (status.didJustFinish) {
-          setPlayingId(null);
-        }
-      });
-    } catch (err) {
-      console.error("Playback error:", err);
+  try {
+    // Stoppa tidigare ljud om det är ett annat
+    if (soundRef.current && playingId !== item.id) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
     }
+
+    // Om samma ljud redan är laddat → bara spela
+    if (soundRef.current && playingId === item.id) {
+      await soundRef.current.playAsync();
+      return;
+    }
+
+    // Annars ladda nytt ljud
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: item.url },
+      { shouldPlay: true }
+    );
+
+    soundRef.current = sound;
+    setPlayingId(item.id);
+
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ("didJustFinish" in status && status.didJustFinish) {
+  setPlayingId(null);
+}
+    });
+  } catch (err) {
+    console.error("Playback error:", err);
   }
+}
+
 
   function renderItem({ item }: { item: AudioItem }) {
     const isPlaying = item.id === playingId;
 
-    return (
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.filename}>🎤 {item.id}.m4a</Text>
-          <Text style={styles.date}>{new Date(item.createdAt).toLocaleString()}</Text>
-        </View>
+    async function togglePlay(item: AudioItem) {
+  // Om samma ljud spelas - stoppa
+  if (soundRef.current && playingId === item.id) {
+    await soundRef.current.stopAsync();
+    await soundRef.current.unloadAsync();
+    soundRef.current = null;
+    setPlayingId(null);
+    return;
+  }
+  play(item);
+}
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => play(item)}
-        >
-          <Text style={styles.buttonText}>
-            {isPlaying ? "⏸ Pause" : "▶ Play"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+return (
+      <View style={styles.audioCard}>
+  <View style={styles.audioLeft}>
+    <View style={styles.audioIconWrap}>
+      <Ionicons name="mic-outline" size={18} color="#00D8E6" />
+    </View>
+
+    <View style={{ marginLeft: 12, flex: 1 }}>
+      <Text
+  style={styles.audioName}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+>
+  {item.id}.m4a
+</Text>
+      <Text style={styles.audioDate}>
+        {new Date(item.createdAt).toLocaleString("sv-SE")}
+      </Text>
+    </View>
+  </View>
+
+  <Pressable style={styles.playBtn} onPress={() => togglePlay(item)}>
+    <Ionicons
+      name={isPlaying ? "stop" : "play"}
+      size={18}
+      color="#08141D"
+    />
+  </Pressable>
+</View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Audio History</Text>
+      <Text style={styles.title}>Ljudhistorik</Text>
 
       <FlatList
         data={items}
@@ -126,8 +159,8 @@ export default function AudioHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: "#08141D" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 16, marginTop: 20, color: "#FFFFFF" },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -144,4 +177,56 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   buttonText: { color: "#fff", fontWeight: "600" },
+
+  audioCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  backgroundColor: "#0D1F2D",
+  borderRadius: 14,
+  padding: 14,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: "#1A3040",
+},
+
+audioLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+  flex: 1, // ← lägg till detta
+},
+
+audioIconWrap: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: "#0D1F2D",
+  borderWidth: 1,
+  borderColor: "#1A3040",
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 2, // ← sänker ringen lite
+},
+
+audioName: {
+  color: "#FFFFFF",
+  fontSize: 14,
+  fontWeight: "700",
+},
+
+audioDate: {
+  color: "#4A6070",
+  fontSize: 12,
+  marginTop: 2,
+},
+
+playBtn: {
+  backgroundColor: "#00D8E6",
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
 });
