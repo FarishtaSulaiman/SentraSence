@@ -8,6 +8,7 @@ import { router } from "expo-router";
 import SentraCheckbox from "@/components/SentraCheckbox";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { useAuth } from "@/contexts/AuthContext";
+import { API } from "@/config/api";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -16,9 +17,6 @@ WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
-
-// Webb körs på samma dator som backend, därför localhost här
-const API_BASE_URL = "http://localhost:5255";
 
 export default function LoginWeb() {
   const { setUser } = useAuth();
@@ -66,7 +64,7 @@ export default function LoginWeb() {
 
         console.log("Google web user:", userInfo);
 
-        const backendResponse = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        const backendResponse = await fetch(`${API}/api/auth/google`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

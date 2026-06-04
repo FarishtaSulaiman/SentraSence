@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { VoskContext } from "../contexts/VoskContext";
 import { useVosk } from "../hooks/useVosk";
 import { codewordManager } from "./codewordManager";
@@ -8,11 +8,11 @@ type Props = {
 };
 
 export function VoskProvider({ children }: Props) {
-  //Global transkribering
   const [lastResult, setLastResult] = useState("");
   const [lastPartial, setLastPartial] = useState("");
 
-  // Reset-funktion som Step2 beh├Âver
+  const hasAutoStartedRef = useRef(false);
+
   const reset = () => {
     setLastResult("");
     setLastPartial("");
@@ -21,8 +21,8 @@ export function VoskProvider({ children }: Props) {
   const {
     isReady,
     isListening,
-    start,
-    stop,
+    start: rawStart,
+    stop: rawStop,
   } = useVosk("model-sv-rhasspy-0.15", {
     onResult: (text) => {
       console.log("Vosk FINAL:", text);
@@ -40,13 +40,23 @@ export function VoskProvider({ children }: Props) {
     },
   });
 
-  // Starta Vosk automatiskt när modellen är redo
+  const start = useCallback(async () => {
+    codewordManager.setActive(true);
+    await rawStart();
+  }, [rawStart]);
+
+  const stop = useCallback(async () => {
+    codewordManager.setActive(false);
+    await rawStop();
+  }, [rawStop]);
+
+  // Starta Vosk automatiskt EN gang nar modellen ar redo
   useEffect(() => {
-    if (isReady && !isListening) {
-      start();
-      codewordManager.setActive(true);
+    if (isReady && !hasAutoStartedRef.current) {
+      hasAutoStartedRef.current = true;
+      void start();
     }
-  }, [isReady, isListening, start]);
+  }, [isReady, start]);
 
   return (
     <VoskContext.Provider
@@ -59,7 +69,7 @@ export function VoskProvider({ children }: Props) {
         lastPartial,
         setLastResult,
         setLastPartial,
-        reset, 
+        reset,
       }}
     >
       {children}

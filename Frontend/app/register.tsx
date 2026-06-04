@@ -9,6 +9,7 @@ import SentraInfoButton from "@/components/SentraInfoButton";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
+import { API } from "@/config/api";
 
 import {
   GoogleSignin,
@@ -19,9 +20,6 @@ import {
 
 const GOOGLE_WEB_CLIENT_ID =
   "384117481196-i5uctgj3gb8b4ahi85k3opb0e8lm1d6n.apps.googleusercontent.com";
-
-// TODO: Ändra till era egna IP-adresser när ni testar på era enheter/emulatorer
-const API_BASE_URL = "http://192.168.50.203:5255";
 
 export default function Register() {
   const { setUser } = useAuth();
@@ -78,21 +76,18 @@ export default function Register() {
 
       console.log("Google register user:", googleUser);
 
-      const backendResponse = await fetch(
-        `${API_BASE_URL}/api/auth/google/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: googleUser.email,
-            name: googleUser.name ?? googleUser.email,
-            googleId: googleUser.id,
-            picture: googleUser.photo,
-          }),
+      const backendResponse = await fetch(`${API}/api/auth/google/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: googleUser.email,
+          name: googleUser.name ?? googleUser.email,
+          googleId: googleUser.id,
+          picture: googleUser.photo,
+        }),
+      });
 
       if (backendResponse.status === 409) {
         setErrorMessage(

@@ -14,46 +14,73 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { API } from "@/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API = "http://localhost:5255";
 const CONSENT_VERSION = "1.0";
 
-type ConsentType = "microphone" | "location" | "audio_recording" | "terms_of_service" | "privacy_policy";
+type ConsentType =
+  | "microphone"
+  | "location"
+  | "audio_recording"
+  | "terms_of_service"
+  | "privacy_policy";
 
-const FUNCTIONAL_CONSENTS: ConsentType[] = ["microphone", "location", "audio_recording"];
+const FUNCTIONAL_CONSENTS: ConsentType[] = [
+  "microphone",
+  "location",
+  "audio_recording",
+];
 const LEGAL_CONSENTS: ConsentType[] = ["terms_of_service", "privacy_policy"];
 
-const CONSENT_META: Record<ConsentType, { icon: React.ComponentProps<typeof Ionicons>["name"]; label: string; warning: string }> = {
+const CONSENT_META: Record<
+  ConsentType,
+  {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    label: string;
+    warning: string;
+  }
+> = {
   microphone: {
     icon: "mic-outline",
     label: "Mikrofonåtkomst",
-    warning: "Utan mikrofonåtkomst kan appen inte lyssna efter ditt kodord och aktivera larm automatiskt.",
+    warning:
+      "Utan mikrofonåtkomst kan appen inte lyssna efter ditt kodord och aktivera larm automatiskt.",
   },
   location: {
     icon: "location-outline",
     label: "Platsdelning",
-    warning: "Utan platsdelning kan dina nödkontakter inte lokalisera dig när ett larm utlöses.",
+    warning:
+      "Utan platsdelning kan dina nödkontakter inte lokalisera dig när ett larm utlöses.",
   },
   audio_recording: {
     icon: "cellular",
     label: "Ljudinspelning vid larm",
-    warning: "Utan ljudinspelning kan inga bevis sparas vid ett larm, vilket kan försvåra en polisutredning.",
+    warning:
+      "Utan ljudinspelning kan inga bevis sparas vid ett larm, vilket kan försvåra en polisutredning.",
   },
   terms_of_service: {
     icon: "document-text-outline",
     label: "Användarvillkor",
-    warning: "Du måste ha godkänt användarvillkoren för att använda SentraSense. Återkallelse innebär att kontot stängs av.",
+    warning:
+      "Du måste ha godkänt användarvillkoren för att använda SentraSense. Återkallelse innebär att kontot stängs av.",
   },
   privacy_policy: {
     icon: "shield-checkmark-outline",
     label: "Integritetspolicy",
-    warning: "Du måste ha godkänt integritetspolicyn (GDPR) för att använda SentraSense. Återkallelse innebär att kontot stängs av.",
+    warning:
+      "Du måste ha godkänt integritetspolicyn (GDPR) för att använda SentraSense. Återkallelse innebär att kontot stängs av.",
   },
 };
 
 // ─── Section header ────────────────────────────────────────────────────────────
-function SectionHeader({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string }) {
+function SectionHeader({
+  icon,
+  title,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  title: string;
+}) {
   return (
     <View style={styles.sectionHeader}>
       <Ionicons name={icon} size={14} color="#00D8E6" />
@@ -79,13 +106,37 @@ function SettingRow({
   destructive?: boolean;
 }) {
   return (
-    <Pressable style={({ pressed }) => [styles.settingRow, pressed && styles.settingRowPressed]} onPress={onPress}>
-      <View style={[styles.settingIcon, destructive && styles.settingIconDestructive]}>
-        <Ionicons name={icon} size={17} color={destructive ? "#FF4F4F" : "#00D8E6"} />
+    <Pressable
+      style={({ pressed }) => [
+        styles.settingRow,
+        pressed && styles.settingRowPressed,
+      ]}
+      onPress={onPress}
+    >
+      <View
+        style={[
+          styles.settingIcon,
+          destructive && styles.settingIconDestructive,
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={17}
+          color={destructive ? "#FF4F4F" : "#00D8E6"}
+        />
       </View>
       <View style={styles.settingText}>
-        <Text style={[styles.settingLabel, destructive && styles.settingLabelDestructive]}>{label}</Text>
-        {sublabel ? <Text style={styles.settingSubLabel}>{sublabel}</Text> : null}
+        <Text
+          style={[
+            styles.settingLabel,
+            destructive && styles.settingLabelDestructive,
+          ]}
+        >
+          {label}
+        </Text>
+        {sublabel ? (
+          <Text style={styles.settingSubLabel}>{sublabel}</Text>
+        ) : null}
       </View>
       {chevron && <Ionicons name="chevron-forward" size={15} color="#4A6070" />}
     </Pressable>
@@ -126,7 +177,12 @@ function ConsentRow({
 function WarningBanner({ text }: { text: string }) {
   return (
     <View style={styles.warningBanner}>
-      <Ionicons name="warning-outline" size={15} color="#F5A623" style={{ marginRight: 8, marginTop: 1 }} />
+      <Ionicons
+        name="warning-outline"
+        size={15}
+        color="#F5A623"
+        style={{ marginRight: 8, marginTop: 1 }}
+      />
       <Text style={styles.warningText}>{text}</Text>
     </View>
   );
@@ -151,24 +207,40 @@ function EditProfileModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible) { setName(initialName); setPhone(initialPhone); }
+    if (visible) {
+      setName(initialName);
+      setPhone(initialPhone);
+    }
   }, [visible, initialName, initialPhone]);
 
   const handleSave = async () => {
     setLoading(true);
-    try { await onSave(name.trim(), phone.trim()); }
-    finally { setLoading(false); }
+    try {
+      await onSave(name.trim(), phone.trim());
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>Redigera personuppgifter</Text>
 
           <Text style={styles.fieldLabel}>Namn</Text>
           <View style={styles.inputWrap}>
-            <Ionicons name="person-outline" size={14} color="#9CC6CF" style={styles.inputIcon} />
+            <Ionicons
+              name="person-outline"
+              size={14}
+              color="#9CC6CF"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.inputField}
               value={name}
@@ -182,7 +254,12 @@ function EditProfileModal({
 
           <Text style={styles.fieldLabel}>Telefonnummer</Text>
           <View style={styles.inputWrap}>
-            <Ionicons name="call-outline" size={14} color="#9CC6CF" style={styles.inputIcon} />
+            <Ionicons
+              name="call-outline"
+              size={14}
+              color="#9CC6CF"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.inputField}
               value={phone}
@@ -199,10 +276,16 @@ function EditProfileModal({
             <Pressable style={styles.modalCancel} onPress={onClose}>
               <Text style={styles.modalCancelText}>Avbryt</Text>
             </Pressable>
-            <Pressable style={styles.modalSave} onPress={handleSave} disabled={loading}>
-              {loading
-                ? <ActivityIndicator size="small" color="#00D8E6" />
-                : <Text style={styles.modalSaveText}>Spara</Text>}
+            <Pressable
+              style={styles.modalSave}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#00D8E6" />
+              ) : (
+                <Text style={styles.modalSaveText}>Spara</Text>
+              )}
             </Pressable>
           </View>
         </View>
@@ -239,10 +322,21 @@ function ConfirmModal({
               <Text style={styles.modalCancelText}>Avbryt</Text>
             </Pressable>
             <Pressable
-              style={[styles.modalSave, config.destructive && styles.modalSaveDestructive]}
-              onPress={() => { onClose(); config.onConfirm(); }}
+              style={[
+                styles.modalSave,
+                config.destructive && styles.modalSaveDestructive,
+              ]}
+              onPress={() => {
+                onClose();
+                config.onConfirm();
+              }}
             >
-              <Text style={[styles.modalSaveText, config.destructive && styles.modalSaveTextDestructive]}>
+              <Text
+                style={[
+                  styles.modalSaveText,
+                  config.destructive && styles.modalSaveTextDestructive,
+                ]}
+              >
                 {config.confirmText}
               </Text>
             </Pressable>
@@ -261,12 +355,16 @@ export default function Settings() {
   const [profilePhone, setProfilePhone] = useState("");
   const [editModalVisible, setEditModalVisible] = useState(false);
 
-  const [consents, setConsents] = useState<Partial<Record<ConsentType, boolean>>>({});
+  const [consents, setConsents] = useState<
+    Partial<Record<ConsentType, boolean>>
+  >({});
   const [consentsLoaded, setConsentsLoaded] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
   const [consentError, setConsentError] = useState(false);
 
-  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(
+    null,
+  );
 
   const [showFunctionalWarning, setShowFunctionalWarning] = useState(false);
   const [showLegalWarning, setShowLegalWarning] = useState(false);
@@ -276,7 +374,7 @@ export default function Settings() {
     if (!user) return;
     // Load user profile (phone)
     fetch(`${API}/api/users/${user.userId}`)
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
           setProfileName(data.name ?? "");
@@ -287,7 +385,7 @@ export default function Settings() {
 
     // Load consents
     fetch(`${API}/api/users/${user.userId}/consents`)
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
       .then((data: { consentType: string; granted: boolean }[]) => {
         const map: Partial<Record<ConsentType, boolean>> = {};
         for (const item of data) {
@@ -301,7 +399,9 @@ export default function Settings() {
 
   // Derived warning visibility
   useEffect(() => {
-    const anyFunctionalOff = FUNCTIONAL_CONSENTS.some((t) => consents[t] === false);
+    const anyFunctionalOff = FUNCTIONAL_CONSENTS.some(
+      (t) => consents[t] === false,
+    );
     setShowFunctionalWarning(anyFunctionalOff);
     const anyLegalOff = LEGAL_CONSENTS.some((t) => consents[t] === false);
     setShowLegalWarning(anyLegalOff);
@@ -323,7 +423,7 @@ export default function Settings() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, consents]
+    [user, consents],
   );
 
   const persistConsent = async (type: ConsentType, granted: boolean) => {
@@ -378,12 +478,15 @@ export default function Settings() {
   const handleDeleteAccount = () => {
     setConfirmConfig({
       title: "Radera konto",
-      message: "All din data – inklusive nödkontakter, samtycken och inspelningar – raderas permanent. Detta går inte att ångra.",
+      message:
+        "All din data – inklusive nödkontakter, samtycken och inspelningar – raderas permanent. Detta går inte att ångra.",
       confirmText: "Radera permanent",
       destructive: true,
       onConfirm: async () => {
         if (!user) return;
-        const res = await fetch(`${API}/api/users/${user.userId}`, { method: "DELETE" });
+        const res = await fetch(`${API}/api/users/${user.userId}`, {
+          method: "DELETE",
+        });
         if (res.ok) {
           setUser(null);
           router.replace("/landingpage");
@@ -392,7 +495,9 @@ export default function Settings() {
     });
   };
 
-  const allFunctionalOn = FUNCTIONAL_CONSENTS.every((t) => consents[t] !== false);
+  const allFunctionalOn = FUNCTIONAL_CONSENTS.every(
+    (t) => consents[t] !== false,
+  );
   const allLegalOn = LEGAL_CONSENTS.every((t) => consents[t] !== false);
 
   return (
@@ -406,7 +511,9 @@ export default function Settings() {
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Inställningar</Text>
           {user && (
-            <Text style={styles.pageSubtitle} numberOfLines={1}>{user.email}</Text>
+            <Text style={styles.pageSubtitle} numberOfLines={1}>
+              {user.email}
+            </Text>
           )}
         </View>
 
@@ -424,13 +531,19 @@ export default function Settings() {
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
               <Text style={styles.avatarLetter}>
-                {profileName ? profileName.charAt(0).toUpperCase() : (user?.email?.charAt(0).toUpperCase() ?? "?")}
+                {profileName
+                  ? profileName.charAt(0).toUpperCase()
+                  : (user?.email?.charAt(0).toUpperCase() ?? "?")}
               </Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profileName || "Inget namn angivet"}</Text>
+              <Text style={styles.profileName}>
+                {profileName || "Inget namn angivet"}
+              </Text>
               <Text style={styles.profileEmail}>{user?.email ?? ""}</Text>
-              {profilePhone ? <Text style={styles.profilePhone}>{profilePhone}</Text> : null}
+              {profilePhone ? (
+                <Text style={styles.profilePhone}>{profilePhone}</Text>
+              ) : null}
             </View>
           </View>
           <SettingRow
@@ -442,47 +555,66 @@ export default function Settings() {
         </View>
 
         {/* ── Behörigheter (funktionella samtycken) ── */}
-        <SectionHeader icon="shield-half-outline" title="Behörigheter & Samtycken" />
+        <SectionHeader
+          icon="shield-half-outline"
+          title="Behörigheter & Samtycken"
+        />
         <View style={styles.card}>
           <Text style={styles.cardNote}>
-            Dessa behörigheter styr SentraSenses kärnfunktioner. Stänger du av dem kan appen inte skydda dig på avsett vis.
+            Dessa behörigheter styr SentraSenses kärnfunktioner. Stänger du av
+            dem kan appen inte skydda dig på avsett vis.
           </Text>
           {consentError && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={14} color="#FF4F4F" style={{ marginRight: 6 }} />
-              <Text style={styles.errorText}>Kunde inte spara samtycket. Försök igen.</Text>
+              <Ionicons
+                name="alert-circle-outline"
+                size={14}
+                color="#FF4F4F"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.errorText}>
+                Kunde inte spara samtycket. Försök igen.
+              </Text>
             </View>
           )}
-          {!consentsLoaded
-            ? <ActivityIndicator color="#00D8E6" style={{ marginVertical: 12 }} />
-            : FUNCTIONAL_CONSENTS.map((type) => (
-                <ConsentRow
-                  key={type}
-                  type={type}
-                  value={consents[type] !== false}
-                  onToggle={handleConsentToggle}
-                  disabled={savingConsent}
-                />
-              ))}
+          {!consentsLoaded ? (
+            <ActivityIndicator color="#00D8E6" style={{ marginVertical: 12 }} />
+          ) : (
+            FUNCTIONAL_CONSENTS.map((type) => (
+              <ConsentRow
+                key={type}
+                type={type}
+                value={consents[type] !== false}
+                onToggle={handleConsentToggle}
+                disabled={savingConsent}
+              />
+            ))
+          )}
         </View>
 
         {/* ── Juridiska samtycken ── */}
-        <SectionHeader icon="document-text-outline" title="Juridiska samtycken" />
+        <SectionHeader
+          icon="document-text-outline"
+          title="Juridiska samtycken"
+        />
         <View style={styles.card}>
           <Text style={styles.cardNote}>
-            Dessa samtycken krävs enligt lag och för att använda tjänsten. Återkallelse innebär att ditt konto stängs av.
+            Dessa samtycken krävs enligt lag och för att använda tjänsten.
+            Återkallelse innebär att ditt konto stängs av.
           </Text>
-          {!consentsLoaded
-            ? <ActivityIndicator color="#00D8E6" style={{ marginVertical: 12 }} />
-            : LEGAL_CONSENTS.map((type) => (
-                <ConsentRow
-                  key={type}
-                  type={type}
-                  value={consents[type] !== false}
-                  onToggle={handleConsentToggle}
-                  disabled={savingConsent}
-                />
-              ))}
+          {!consentsLoaded ? (
+            <ActivityIndicator color="#00D8E6" style={{ marginVertical: 12 }} />
+          ) : (
+            LEGAL_CONSENTS.map((type) => (
+              <ConsentRow
+                key={type}
+                type={type}
+                value={consents[type] !== false}
+                onToggle={handleConsentToggle}
+                disabled={savingConsent}
+              />
+            ))
+          )}
           <View style={styles.legalLinks}>
             <Pressable onPress={() => router.push("/terms" as any)}>
               <Text style={styles.legalLink}>Läs användarvillkor →</Text>
@@ -590,7 +722,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 2,
   },
-  sectionTitle: { color: "#00D8E6", fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  sectionTitle: {
+    color: "#00D8E6",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
 
   card: {
     backgroundColor: "rgba(18, 34, 45, 0.75)",
@@ -721,8 +859,21 @@ const styles = StyleSheet.create({
     borderColor: "rgba(90, 220, 235, 0.2)",
     padding: 24,
   },
-  modalTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "800", marginBottom: 20 },
-  fieldLabel: { color: "#9CC6CF", fontSize: 11, fontWeight: "600", marginBottom: 6, marginTop: 12, textTransform: "uppercase", letterSpacing: 0.5 },
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 20,
+  },
+  fieldLabel: {
+    color: "#9CC6CF",
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 6,
+    marginTop: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -768,7 +919,12 @@ const styles = StyleSheet.create({
     borderColor: "#FF4F4F",
   },
   modalSaveTextDestructive: { color: "#FF4F4F" },
-  confirmMessage: { color: "#9CC6CF", fontSize: 13, lineHeight: 19, marginBottom: 4 },
+  confirmMessage: {
+    color: "#9CC6CF",
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 4,
+  },
 
   // Error banner
   errorBanner: {
