@@ -163,6 +163,28 @@ function Countdown({
   );
 }
 
+async function startRecordingWithRetry() {
+  const retryDelaysMs = [0, 25];
+
+  for (let attempt = 0; attempt < retryDelaysMs.length; attempt += 1) {
+    if (retryDelaysMs[attempt] > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelaysMs[attempt]),
+      );
+    }
+
+    try {
+      await startRecording();
+      return;
+    } catch (error) {
+      console.warn(`startRecording attempt ${attempt + 1} failed`, error);
+      if (attempt === retryDelaysMs.length - 1) {
+        throw error;
+      }
+    }
+  }
+}
+
 // ─── Alarm screen ──────────────────────────────────────────────────────────────
 
 export default function AlarmScreen() {
@@ -308,13 +330,10 @@ export default function AlarmScreen() {
       if (isVoskListening) {
         console.log("Stopping Vosk before recording...");
         await stopVosk();
-
-        // Ge Android lite tid att slappa mikrofonen
-        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       console.log("Starting recording...");
-      await startRecording();
+      await startRecordingWithRetry();
 
       recordingTimeoutRef.current = setTimeout(async () => {
         try {
