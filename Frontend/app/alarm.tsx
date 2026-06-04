@@ -78,7 +78,7 @@ function StatusItem({
   statusText: string;
   statusColor: string;
   showSpinner?: boolean;
-}){
+}) {
   return (
     <View style={styles.statusItem}>
       <View
@@ -167,7 +167,11 @@ function Countdown({
 
 export default function AlarmScreen() {
   const { user } = useAuth();
-  const { isListening: isVoskListening, stop: stopVosk, start: startVosk } = useVoskService();
+  const {
+    isListening: isVoskListening,
+    stop: stopVosk,
+    start: startVosk,
+  } = useVoskService();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const { unreadCount, refreshUnreadCount } = useUnreadNotifications(
     user?.userId,
@@ -178,11 +182,15 @@ export default function AlarmScreen() {
   const [alarmStatus, setAlarmStatus] = useState<
     "countdown" | "triggering" | "active" | "confirmed" | "cancelled"
   >("countdown");
-  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const alarmEventIdRef = useRef<string | null>(null);
   const hasTriggeredEmergencyRef = useRef(false);
-  
+
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
@@ -196,7 +204,7 @@ export default function AlarmScreen() {
           duration: 700,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
 
     animation.start();
@@ -207,47 +215,49 @@ export default function AlarmScreen() {
   }, [pulseAnim]);
 
   // Cleanup on unmount
-useEffect(() => {
-  return () => {
-    console.log("AlarmScreen unmounted → cleaning up");
+  useEffect(() => {
+    return () => {
+      console.log("AlarmScreen unmounted → cleaning up");
 
-    // 1. Stoppa GPS‑tracking
-    if (locationIntervalRef.current) {
-      clearInterval(locationIntervalRef.current);
-      locationIntervalRef.current = null;
-    }
+      // 1. Stoppa GPS‑tracking
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
+        locationIntervalRef.current = null;
+      }
 
-    // 2. Stoppa timeout om den väntar
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
+      // 2. Stoppa timeout om den väntar
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
 
-    // 3. Stoppa inspelningen direkt
-    stopRecording()
-      .then(async (uri) => {
-        if (!uri) return;
+      // 3. Stoppa inspelningen direkt
+      stopRecording()
+        .then(async (uri) => {
+          if (!uri) return;
 
-        // 4. Ladda upp ljudet
-        const fileName = `alert_${Date.now()}.m4a`;
-        const blobUrl = await uploadAudioToBlob(uri, fileName);
+          // 4. Ladda upp ljudet
+          const fileName = `alert_${Date.now()}.m4a`;
+          const blobUrl = await uploadAudioToBlob(uri, fileName);
 
-        // 5. Koppla ljudet till alarmEvent
-        if (alarmEventIdRef.current) {
-          await fetch(`${API_BASE}/api/alarm/${alarmEventIdRef.current}/audio`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user?.userId,
-              audioUrl: blobUrl,
-            }),
-          });
-        }
-      })
-      .catch(() => {});
-  };
-}, []);
-
+          // 5. Koppla ljudet till alarmEvent
+          if (alarmEventIdRef.current) {
+            await fetch(
+              `${API_BASE}/api/alarm/${alarmEventIdRef.current}/audio`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: user?.userId,
+                  audioUrl: blobUrl,
+                }),
+              },
+            );
+          }
+        })
+        .catch(() => {});
+    };
+  }, []);
 
   async function triggerEmergencyFlow() {
     if (hasTriggeredEmergencyRef.current) return;
@@ -321,18 +331,25 @@ useEffect(() => {
           console.log("Blob uploaded to:", blobUrl);
 
           if (activeAlarmId) {
-            const attachRes = await fetch(`${API_BASE}/api/alarm/${activeAlarmId}/audio`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: user?.userId,
-                audioUrl: blobUrl,
-              }),
-            });
+            const attachRes = await fetch(
+              `${API_BASE}/api/alarm/${activeAlarmId}/audio`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: user?.userId,
+                  audioUrl: blobUrl,
+                }),
+              },
+            );
 
             if (!attachRes.ok) {
               const errorText = await attachRes.text();
-              console.error("Failed to attach audio", attachRes.status, errorText);
+              console.error(
+                "Failed to attach audio",
+                attachRes.status,
+                errorText,
+              );
             } else {
               console.log("Audio attached successfully");
             }
@@ -425,7 +442,11 @@ useEffect(() => {
           {isConfirmed ? "HJÄLP PÅ VÄG" : "NÖDLARM AKTIVERAT"}
         </Text>
         <Text style={styles.alarmSub}>
-          {isConfirmed ? "(BEKRÄFTAT)" : isCountdown ? "(VÄNTAR)" : "(SKICKAR...)"}
+          {isConfirmed
+            ? "(BEKRÄFTAT)"
+            : isCountdown
+              ? "(VÄNTAR)"
+              : "(SKICKAR...)"}
         </Text>
 
         {/* Pulse icon */}
@@ -463,8 +484,8 @@ useEffect(() => {
           {isConfirmed
             ? "Dina kontakter har fått ett SMS. Din position uppdateras tills larmet stängs."
             : isCountdown
-            ? "Larmet är inte skickat ännu. Bekräfta att du behöver hjälp eller vänta tills nedräkningen når noll."
-            : "Larmet skickas nu till dina kontakter..."}
+              ? "Larmet är inte skickat ännu. Bekräfta att du behöver hjälp eller vänta tills nedräkningen når noll."
+              : "Larmet skickas nu till dina kontakter..."}
         </Text>
 
         {/* Status items */}
@@ -473,16 +494,28 @@ useEffect(() => {
             icon="notifications"
             iconColor="#E63946"
             title="Larm skickas"
-            desc={isCountdown ? "Väntar på bekräftelse eller nedräkning." : "Dina kontakter notifieras nu."}
-            statusText={isCountdown ? "Väntar" : isTriggering ? "Skickas..." : "Skickat"}
-            statusColor={isCountdown ? "#F39C12" : isTriggering ? "#E63946" : "#2ECC71"}
+            desc={
+              isCountdown
+                ? "Väntar på bekräftelse eller nedräkning."
+                : "Dina kontakter notifieras nu."
+            }
+            statusText={
+              isCountdown ? "Väntar" : isTriggering ? "Skickas..." : "Skickat"
+            }
+            statusColor={
+              isCountdown ? "#F39C12" : isTriggering ? "#E63946" : "#2ECC71"
+            }
             showSpinner={isTriggering}
           />
           <StatusItem
             icon="location"
             iconColor="#00D8E6"
             title="Position delas"
-            desc={isCountdown ? "Aktiveras när larmet skickas." : "Din plats uppdateras i realtid."}
+            desc={
+              isCountdown
+                ? "Aktiveras när larmet skickas."
+                : "Din plats uppdateras i realtid."
+            }
             statusText={isCountdown ? "Väntar" : "Aktiv"}
             statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
@@ -490,7 +523,11 @@ useEffect(() => {
             icon="mic"
             iconColor="#9B59B6"
             title="Ljudinspelning"
-            desc={isCountdown ? "Aktiveras när larmet skickas." : "Mikrofonen spelar in omgivningen."}
+            desc={
+              isCountdown
+                ? "Aktiveras när larmet skickas."
+                : "Mikrofonen spelar in omgivningen."
+            }
             statusText={isCountdown ? "Väntar" : "Aktiv"}
             statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
@@ -498,7 +535,11 @@ useEffect(() => {
             icon="shield"
             iconColor="#F39C12"
             title="AI-analys"
-            desc={isCountdown ? "Aktiveras när larmet skickas." : "Analyserar ljud för att förstå situationen."}
+            desc={
+              isCountdown
+                ? "Aktiveras när larmet skickas."
+                : "Analyserar ljud för att förstå situationen."
+            }
             statusText={isCountdown ? "Väntar" : "Aktiv"}
             statusColor={isCountdown ? "#F39C12" : "#2ECC71"}
           />
@@ -510,13 +551,19 @@ useEffect(() => {
               isCountdown
                 ? "Ingen kontakt har notifierats ännu."
                 : isTriggering
-                ? "Kontaktar dina nödkontakter..."
-                : `${contactCount} nödkontakt${contactCount !== 1 ? "er" : ""} har notifierats.`
+                  ? "Kontaktar dina nödkontakter..."
+                  : `${contactCount} nödkontakt${contactCount !== 1 ? "er" : ""} har notifierats.`
             }
             statusText={
-              isCountdown ? "Väntar" : isTriggering ? "..." : `${contactCount} av ${contactCount}`
+              isCountdown
+                ? "Väntar"
+                : isTriggering
+                  ? "..."
+                  : `${contactCount} av ${contactCount}`
             }
-            statusColor={isCountdown ? "#F39C12" : isTriggering ? "#F39C12" : "#2ECC71"}
+            statusColor={
+              isCountdown ? "#F39C12" : isTriggering ? "#F39C12" : "#2ECC71"
+            }
             showSpinner={isTriggering}
           />
         </View>
@@ -558,7 +605,10 @@ useEffect(() => {
           </Pressable>
 
           <Pressable
-            style={[styles.helpBtn, isConfirmed && { backgroundColor: "#2ECC71" }]}
+            style={[
+              styles.helpBtn,
+              isConfirmed && { backgroundColor: "#2ECC71" },
+            ]}
             onPress={() => {
               void triggerEmergencyFlow();
             }}
