@@ -131,15 +131,17 @@ npx expo start --dev-client
 
 ### Viktigt vid Android-test lokalt
 
-För att mobilappen ska nå backend lokalt behöver `API_BASE_URL` peka på datorns lokala IP-adress, inte `localhost`.
+För att mobilappen ska nå backend lokalt behöver API-konfigurationen peka på datorns lokala IP-adress, inte `localhost`.
 
 Exempel:
 
 ```js
-const API_BASE_URL = "http://192.168.x.x:5255";
+EXPO_PUBLIC_API_URL=http://192.168.x.x:5255
 ```
 
-Backendens CORS-konfiguration behöver också tillåta motsvarande lokala frontend-origin.
+Appen använder i första hand `EXPO_PUBLIC_API_URL` från `.env`. Om den saknas försöker `Frontend/config/api.ts` automatiskt använda Expo-hostens IP-adress.
+
+Backendens CORS-konfiguration behöver fortfarande tillåta rätt frontend-origin i `Program.cs`, exempelvis `http://192.168.x.x:8081` när ni testar på lokalt nätverk.
 
 Detta behövs främst vid Android-testning. GoogleAuth för webb kan testas fullt ut utan Android-enhet.
 
@@ -155,10 +157,8 @@ E-post/lösenord-login, vanlig registrering och forgot password är pausat tills
 
 Vid Android-testning lokalt behöver varje utvecklare:
 
-1. Ändra `API_BASE_URL` i `login.tsx` och `register.tsx` till sin egen lokala IP-adress.
-2. Lägga till sin Expo-origin i `Program.cs`, exempelvis:
-   `"http://192.168.x.x:8081"`
-3. Starta backend med:
+1. Sätta `EXPO_PUBLIC_API_URL` i `Frontend/.env` till sin egen lokala IP-adress.
+2. Starta backend med:
    `dotnet run --urls "http://0.0.0.0:5255"`
 
 Webbtestning kräver inga sådana ändringar och fungerar som vanligt via `localhost`.

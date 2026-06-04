@@ -17,6 +17,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { API } from "@/config/api";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { useVoskService } from "@/hooks/useVoskService";
 import { startRecording, stopRecording } from "@/services/audioService";
 import { uploadAudioToBlob } from "@/services/blobUploadService";
 
@@ -166,6 +167,7 @@ function Countdown({
 
 export default function AlarmScreen() {
   const { user } = useAuth();
+  const { isListening: isVoskListening, stop: stopVosk, start: startVosk } = useVoskService();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const { unreadCount, refreshUnreadCount } = useUnreadNotifications(
     user?.userId,
@@ -293,7 +295,15 @@ useEffect(() => {
     }
 
     try {
-      console.log("Starting recording…");
+      if (isVoskListening) {
+        console.log("Stopping Vosk before recording...");
+        await stopVosk();
+
+        // Ge Android lite tid att slappa mikrofonen
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      console.log("Starting recording...");
       await startRecording();
 
       recordingTimeoutRef.current = setTimeout(async () => {
@@ -331,6 +341,9 @@ useEffect(() => {
           console.error("Recording/upload flow error", err);
         } finally {
           recordingTimeoutRef.current = null;
+
+          console.log("Restarting Vosk after recording...");
+          await startVosk();
         }
       }, 10000);
     } catch (err) {

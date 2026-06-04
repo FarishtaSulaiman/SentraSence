@@ -24,6 +24,9 @@ builder.Services.AddCors(options =>
                 // "http://192.168.68.104:8081"
                 "http://192.168.8.6:8081"
 
+                // Newton IP
+                // "http://<school-ip>:8081"
+
                 // Alexander
                 // "http://
 

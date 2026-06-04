@@ -3,8 +3,10 @@ import { createContext } from "react";
 export type VoskContextType = {
   isReady: boolean;
   isListening: boolean;
-  start: () => void;
-  stop: () => void;
+  // start: () => void;
+  // stop: () => void;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
 
   lastResult: string;
   lastPartial: string;

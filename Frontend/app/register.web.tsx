@@ -8,6 +8,7 @@ import SentraCheckbox from "@/components/SentraCheckbox";
 import SentraInfoButton from "@/components/SentraInfoButton";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { API } from "@/config/api";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -89,21 +90,18 @@ export default function Register() {
 
         console.log("Google register user:", userInfo);
 
-        const backendResponse = await fetch(
-          "http://localhost:5255/api/auth/google/register",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: userInfo.email,
-              name: userInfo.name,
-              googleId: userInfo.id,
-              picture: userInfo.picture,
-            }),
+        const backendResponse = await fetch(`${API}/api/auth/google/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            googleId: userInfo.id,
+            picture: userInfo.picture,
+          }),
+        });
 
         if (backendResponse.status === 409) {
           setErrorMessage(
